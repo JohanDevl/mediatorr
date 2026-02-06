@@ -107,6 +107,16 @@ const cleanTitle = title =>
 const isVideoFile = f =>
   VIDEO_EXT.includes(path.extname(f).slice(1).toLowerCase());
 
+function findSourceNfo(dir) {
+  try {
+    const entries = fs.readdirSync(dir);
+    const nfo = entries.find(e => e.toLowerCase().endsWith('.nfo'));
+    return nfo ? path.join(dir, nfo) : null;
+  } catch {
+    return null;
+  }
+}
+
 const EPISODE_RE = /[Ss](\d{1,2})[Ee](\d{1,3})/g;
 
 function extractEpisodeNumbers(filenames) {
@@ -345,12 +355,15 @@ async function processFile(file, destBase, index, total, label, tmdbType = 'movi
   const txt = path.join(outDir, `${name}.txt`);
 
   const hasCache = hasTMDbCache(name, tmdbType);
+  const sourceNfoFile = findSourceNfo(path.dirname(file));
+  const sourceNfoDest = path.join(outDir, `${name}.source.nfo`);
 
   if (
     fs.existsSync(nfo) &&
     fs.existsSync(torrent) &&
     fs.existsSync(txt) &&
-    hasCache
+    hasCache &&
+    (!sourceNfoFile || fs.existsSync(sourceNfoDest))
   ) {
     skipped++;
     console.log(`⏭️ Déjà traité : ${path.basename(file)}`);
@@ -359,6 +372,11 @@ async function processFile(file, destBase, index, total, label, tmdbType = 'movi
 
   console.log(`📊 ${label} ${index}/${total} → ${path.basename(file)}`);
   fs.mkdirSync(outDir, { recursive: true });
+
+  if (sourceNfoFile && !fs.existsSync(sourceNfoDest)) {
+    fs.copyFileSync(sourceNfoFile, sourceNfoDest);
+    console.log(`📋 Source NFO copié : ${path.basename(sourceNfoFile)} → ${name}.source.nfo`);
+  }
 
   if (!fs.existsSync(nfo)) {
     let mediadata = await execAsync('mediainfo', [file]);
@@ -462,8 +480,16 @@ async function processSeriesFolder(folder, destBase, index, total) {
   const nfo = path.join(outDir, `${name}.nfo`);
   const txt = path.join(outDir, `${name}.txt`);
   const hasCache = hasTMDbCache(name, 'tv');
+  const sourceNfoFile = findSourceNfo(folder);
+  const sourceNfoDest = path.join(outDir, `${name}.source.nfo`);
 
-  if (fs.existsSync(torrent) && fs.existsSync(nfo) && fs.existsSync(txt) && hasCache) {
+  if (
+    fs.existsSync(torrent) &&
+    fs.existsSync(nfo) &&
+    fs.existsSync(txt) &&
+    hasCache &&
+    (!sourceNfoFile || fs.existsSync(sourceNfoDest))
+  ) {
     skipped++;
     console.log(`⏭️ Déjà traité (dossier complet) : ${name}`);
     return;
@@ -471,6 +497,11 @@ async function processSeriesFolder(folder, destBase, index, total) {
 
   console.log(`📊 Série ${index}/${total} → ${name} (${videos.length} fichiers)`);
   fs.mkdirSync(outDir, { recursive: true });
+
+  if (sourceNfoFile && !fs.existsSync(sourceNfoDest)) {
+    fs.copyFileSync(sourceNfoFile, sourceNfoDest);
+    console.log(`📋 Source NFO copié : ${path.basename(sourceNfoFile)} → ${name}.source.nfo`);
+  }
 
   await createSeriesMeta(outDir, name, videos, 'tv');
 
