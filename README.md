@@ -1,55 +1,82 @@
 # 🧲 Torrentify
 
-**Torrentify** est un conteneur Docker qui génère automatiquement des fichiers  
+**Torrentify** est un conteneur Docker qui génère automatiquement des fichiers
 **.torrent**, **.nfo** et des métadonnées **TMDb / iTunes** à partir de **films, séries et musiques**.
 
-Il surveille un ou plusieurs dossiers de vidéos, analyse les noms de fichiers,
+Il surveille un ou plusieurs dossiers, analyse les noms de fichiers,
 récupère les informations depuis **TMDb** (films & séries) et **iTunes** (musiques),
-et prépare des fichiers propres et prêts à l’usage pour les **trackers privés** depuis une machine **Unraid**, **NAS** et **seedbox**.
+et prépare des fichiers propres et prêts à l'usage pour les **trackers privés** depuis une machine **Unraid**, **NAS** et **seedbox**.
 
 ---
 
 ## ✨ Fonctionnalités
 
-- 🎬 Génération automatique de fichiers `.torrent`
-- 🧲 Trackers configurables via variables d’environnement
-- 🛠️ Mise à jour des **Trackers** via `mkbrr`
-- 📝 Création de fichiers `.nfo` propres (sans chemins absolus)
+- 🎬 Génération automatique de fichiers `.torrent` via `mkbrr`
+- 🧲 Trackers configurables avec mise à jour automatique des `.torrent` existants si les URLs changent
+- 📝 Création de fichiers `.nfo` (mediainfo, sans chemins absolus)
+- 📋 Copie automatique des `.nfo` source dans le dossier de sortie
 - 📄 Fichier `.txt` avec ID TMDb ou message explicite si non trouvé
-- 👀 Surveillance en temps réel des dossiers **films, séries et musiques**
+- 👀 Surveillance en temps réel via `inotifywait` (création, déplacement, écriture)
+- 📂 Support de **répertoires sources multiples** par type de média (ex: `/films` + `/films-4k`)
 - 🔄 Scan initial automatique au démarrage du conteneur
 - 🔍 Scan récursif des sous-dossiers
 - 🧠 Analyse intelligente des noms de fichiers (GuessIt)
-- 🎞️ Recherche **TMDb/iTunes** avec cache local
+- 🎞️ Recherche **TMDb** (FR puis EN) et **iTunes** avec cache local persistant
 - 📦 Cache auto-recréé si supprimé ou corrompu
 - ⚙️ Activation indépendante des **films**, **séries** et des **musiques**
+- 🎯 Détection automatique saison vs série complète avec nombre de fichiers et taille totale dans le NFO
+- ⏳ Détection des téléchargements en cours (`.part`, `.tmp`, `.crdownload`)
+- ⚡ Traitement parallèle configurable
 - 📁 Sortie structurée par type (films / séries / musiques)
 - 🐳 Image Docker légère basée sur Alpine
 - 🧱 Compatible multi-architecture (`amd64` / `arm64`)
 
 ---
 
-## ⚙️ Variables d’environnement
+## ⚙️ Variables d'environnement
+
+### Requises
 
 | Variable | Description |
 |--------|------------|
-| `TMDB_API_KEY` | Clé API TMDb |
 | `TRACKERS` | URLs des trackers (séparées par des virgules) |
+| `TMDB_API_KEY` | Clé API TMDb (requis si films ou séries activés) |
+
+### Activation des médias
+
+| Variable | Description |
+|--------|------------|
 | `ENABLE_FILMS` | Active le traitement et la surveillance des films (`true` / `false`) |
 | `ENABLE_SERIES` | Active le traitement et la surveillance des séries (`true` / `false`) |
 | `ENABLE_MUSIQUES` | Active le traitement et la surveillance des musiques (`true` / `false`) |
-| `PARALLEL_JOBS` | Nombre de fichiers traités en parallèle (défaut : `1`) |
+
+> ⚠️ **Au moins un des trois** doit être activé.
+
+### Répertoires sources (optionnel)
+
+| Variable | Description |
+|--------|------------|
 | `FILMS_DIRS` | Répertoires source des films, séparés par virgules (défaut : `/films`) |
 | `SERIES_DIRS` | Répertoires source des séries, séparés par virgules (défaut : `/series`) |
 | `MUSIQUES_DIRS` | Répertoires source des musiques, séparés par virgules (défaut : `/musiques`) |
 
-> ⚠️ **Au moins un des trois** (`ENABLE_FILMS` ou `ENABLE_SERIES` ou `ENABLE_MUSIQUES`) doit être activé.
+> Permet de surveiller plusieurs dossiers par type, ex: `FILMS_DIRS: "/films,/films-4k"`
+
+### Optionnelles
+
+| Variable | Description |
+|--------|------------|
+| `PARALLEL_JOBS` | Nombre de fichiers traités en parallèle (défaut : `1`) |
+| `SCAN_COOLDOWN` | Délai en secondes entre deux scans consécutifs (défaut : `5`) |
+| `PUID` | User ID du processus dans le conteneur (défaut : `99`) |
+| `PGID` | Group ID du processus dans le conteneur (défaut : `100`) |
 
 ---
 
 ## 📁 Volumes
 
-### 📥 Entrée (vidéos)
+### 📥 Entrée (médias)
+
 | Chemin conteneur | Description |
 |-----------------|------------|
 | `/films` | Dossier des films par défaut (configurable via `FILMS_DIRS`) |
@@ -57,9 +84,10 @@ et prépare des fichiers propres et prêts à l’usage pour les **trackers priv
 | `/musiques` | Dossier des musiques par défaut (configurable via `MUSIQUES_DIRS`) |
 
 ### 📤 Sortie
+
 | Chemin conteneur | Description |
 |-----------------|------------|
-| `/data` | Torrents, NFO, Fichiers TXT générés et Cache local TMDb |
+| `/data` | Torrents, NFO, fichiers TXT générés et caches API |
 
 ---
 
@@ -71,32 +99,37 @@ data/
 │   └── Nom.Film/
 │       ├── Nom.Film.torrent
 │       ├── Nom.Film.nfo
+│       ├── Nom.Film.source.nfo    ← copie du NFO source (si présent)
 │       └── Nom.Film.txt
 ├── series/
-│   └── Nom.Serie/
-│       ├── Nom.Serie.torrent
-│       ├── Nom.Serie.nfo
-│       └── Nom.Serie.txt
+│   └── Nom.Serie.S01/
+│       ├── Nom.Serie.S01.torrent
+│       ├── Nom.Serie.S01.nfo
+│       ├── Nom.Serie.S01.source.nfo
+│       └── Nom.Serie.S01.txt
 ├── musiques/
 │   └── Nom.Album/
 │       ├── Nom.Album.torrent
 │       ├── Nom.Album.nfo
 │       └── Nom.Album.txt
-├── cache_tmdb
-│   └── X.json
+├── cache_tmdb/
+│   └── *.json
 ├── cache_itunes/
 │   └── *.json
-└── trackers.fingerprint.sha256 <-- fingerprint variable `TRACKERS`
+└── trackers.fingerprint.sha256
 ```
+
+---
+
 ## 🚀 Exemple docker-compose
 
 ```yaml
 services:
   torrentify:
-    image: thimble9057/torrentify:latest
+    image: johandevl/torrentify:latest
     container_name: torrentify
     restart: unless-stopped
-    
+
     user: "1000:1000"
 
     environment:
@@ -130,12 +163,19 @@ services:
       # Sorties
       - /destination/torrent:/data
 ```
+
+---
+
+## 🔧 Gestion des trackers
+
+Au démarrage, Torrentify calcule un fingerprint SHA256 des URLs de trackers configurées. Si les trackers ont changé depuis le dernier lancement, tous les fichiers `.torrent` existants sont automatiquement mis à jour avec les nouvelles URLs via `mkbrr modify`.
+
+---
+
 ## 📝 Notes
 
-Les séries sont traitées exactement comme les films
-(pas de gestion saison/épisode spécifique).
-
-Un fichier ou dossier = un torrent
-
-Les fichiers déjà traités ne sont jamais régénérés.
-Les caches API sont persistants et auto-réparés
+- **Films** : un fichier = un torrent, recherche TMDb
+- **Séries** : un dossier = un torrent, détection automatique saison/série, recherche TMDb
+- **Musiques** : un album (dossier ou fichier) = un torrent, recherche iTunes, attente fin des `.part`
+- Les fichiers déjà traités ne sont jamais régénérés
+- Les caches API sont persistants et auto-réparés
