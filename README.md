@@ -60,7 +60,7 @@ et prépare des fichiers propres et prêts à l'usage pour les **trackers privé
 | `SERIES_DIRS` | Répertoires source des séries, séparés par virgules (défaut : `/series`) |
 | `MUSIQUES_DIRS` | Répertoires source des musiques, séparés par virgules (défaut : `/musiques`) |
 
-> Permet de surveiller plusieurs dossiers par type, ex: `FILMS_DIRS: "/films,/films-4k"`
+> Permet de surveiller plusieurs dossiers par type, ex: `FILMS_DIRS=/films,/films-4k`
 
 ### Optionnelles
 
@@ -134,22 +134,18 @@ services:
 
     environment:
       # Activation des médias
-      ENABLE_FILMS: "true"
-      ENABLE_SERIES: "false"
-      ENABLE_MUSIQUES: "true"
-
+      - ENABLE_FILMS=true
+      - ENABLE_SERIES=false
+      - ENABLE_MUSIQUES=true
       # TMDb
-      TMDB_API_KEY: votre_cle_tmdb
-
+      - TMDB_API_KEY=votre_cle_tmdb
       # Trackers (séparés par virgules)
-      TRACKERS: https://tracker1/announce,https://tracker2/announce
-
+      - TRACKERS=https://tracker1/announce,https://tracker2/announce
       # Répertoires sources multiples (optionnel, séparés par virgules)
-      # FILMS_DIRS: "/films,/films-4k"
-      # SERIES_DIRS: "/series,/series-4k"
-
+      # - FILMS_DIRS=/films,/films-4k
+      # - SERIES_DIRS=/series,/series-4k
       # Optionnel
-      PARALLEL_JOBS: 1
+      - PARALLEL_JOBS=1
 
     volumes:
       # Entrées

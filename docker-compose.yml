@@ -8,25 +8,20 @@ services:
 
     environment:
       # Activation des médias
-      ENABLE_FILMS: "true"
-      ENABLE_SERIES: "false"
-      ENABLE_MUSIQUES: "true"
-
-
+      - ENABLE_FILMS=true
+      - ENABLE_SERIES=false
+      - ENABLE_MUSIQUES=true
       # TMDb
-      TMDB_API_KEY: votre_cle_tmdb
-
+      - TMDB_API_KEY=votre_cle_tmdb
       # Trackers (séparés par virgules)
-      TRACKERS: https://tracker1/announce,https://tracker2/announce
-
+      - TRACKERS=https://tracker1/announce,https://tracker2/announce
       # Répertoires sources multiples (optionnel, séparés par virgules)
       # Si non défini, utilise les chemins par défaut : /films, /series, /musiques
-      # FILMS_DIRS: "/films,/films-4k"
-      # SERIES_DIRS: "/series,/series-4k"
-      # MUSIQUES_DIRS: "/musiques"
-
+      # - FILMS_DIRS=/films,/films-4k
+      # - SERIES_DIRS=/series,/series-4k
+      # - MUSIQUES_DIRS=/musiques
       # Optionnel
-      PARALLEL_JOBS: 1
+      - PARALLEL_JOBS=1
 
     volumes:
       # Entrées
