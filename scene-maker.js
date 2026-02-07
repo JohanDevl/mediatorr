@@ -396,7 +396,7 @@ async function getCachedMusic(artist, title) {
 }
 
 // ---------------------- PROCESS FILE ----------------------
-async function processFile(file, destBase, index, total, label, tmdbType = 'movie') {
+async function processFile(file, destBase, index, total, label, tmdbType = 'movie', sourceDirs = []) {
   const nameNoExt = path.parse(file).name;
   const name = safeName(nameNoExt);
   const outDir = path.join(destBase, name);
@@ -405,9 +405,11 @@ async function processFile(file, destBase, index, total, label, tmdbType = 'movi
   const txt = path.join(outDir, `${name}.txt`);
 
   const hasCache = hasTMDbCache(name, tmdbType);
-  const sourceNfoFile = findSourceNfo(path.dirname(file));
-  const sourceNfoDest = path.join(outDir, `${name}.source.nfo`);
   const srcInfo = path.join(outDir, `${name}.srcinfo`);
+  const fileDir = path.resolve(path.dirname(file));
+  const isInSubfolder = sourceDirs.length > 0 && !sourceDirs.some(s => path.resolve(s) === fileDir);
+  const sourceNfoFile = isInSubfolder ? findSourceNfo(fileDir) : null;
+  const sourceNfoDest = isInSubfolder ? path.join(outDir, `${name}.source.nfo`) : null;
 
   if (
     fs.existsSync(nfo) &&
@@ -796,7 +798,7 @@ async function runTasks(tasks, limit) {
       const total = files.length;
 
       await runTasks(
-        files.map(f => () => processFile(f, media.dest, ++i, total, 'Film', TMDB_TYPE_BY_MEDIA[media.name])),
+        files.map(f => () => processFile(f, media.dest, ++i, total, 'Film', TMDB_TYPE_BY_MEDIA[media.name], media.sources)),
         PARALLEL_JOBS
       );
     }
@@ -821,7 +823,7 @@ async function runTasks(tasks, limit) {
 
         if (e.isFile() && isVideoFile(e.name)) {
           tasks.push(() =>
-            processFile(full, media.dest, ++i, total, 'Série fichier', TMDB_TYPE_BY_MEDIA[media.name])
+            processFile(full, media.dest, ++i, total, 'Série fichier', TMDB_TYPE_BY_MEDIA[media.name], media.sources)
           );
         }
 
