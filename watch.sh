@@ -7,7 +7,7 @@ ENABLE_MUSIQUES="${ENABLE_MUSIQUES:-false}"
 
 has_partial_files() {
   DIR="$1"
-  find "$DIR" -type f \( \
+  find "$DIR" -maxdepth 1 -type f \( \
     -name "*.part" \
     -o -name "*.tmp" \
     -o -name "*.crdownload" \
@@ -17,6 +17,8 @@ has_partial_files() {
 watch_dir() {
   DIR="$1"
   LABEL="$2"
+  LAST_SCAN=0
+  COOLDOWN=${SCAN_COOLDOWN:-5}
 
   echo "👀 Surveillance activée pour $LABEL : $DIR"
 
@@ -42,8 +44,21 @@ watch_dir() {
 
     case "$path" in
       *.mkv|*.mp4|*.avi|*.mov|*.flv|*.wmv|*.m4v|*.mp3|*.flac|*.aac|*.wav)
+        # cooldown pour éviter les scans redondants (create + close_write)
+        NOW=$(date +%s)
+        if [ $((NOW - LAST_SCAN)) -lt "$COOLDOWN" ]; then
+          continue
+        fi
         echo "✅ Téléchargement terminé ($LABEL) : $(basename "$path")"
-        node /app/scene-maker.js
+        LAST_SCAN=$(date +%s)
+        node /app/scene-maker.js || echo "⚠️ Erreur scene-maker ($LABEL), reprise au prochain événement"
+        ;;
+      *)
+        if [ -d "$path" ]; then
+          echo "📁 Nouveau dossier détecté ($LABEL) : $(basename "$path")"
+          LAST_SCAN=$(date +%s)
+          node /app/scene-maker.js || echo "⚠️ Erreur scene-maker ($LABEL), reprise au prochain événement"
+        fi
         ;;
     esac
   done
