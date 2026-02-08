@@ -235,8 +235,7 @@ function hasSourceChanged(srcInfoPath, sourceFiles) {
 
 // ---------------------- TORRENT MODIFY ----------------------
 async function modifyTorrentTrackers(torrentPath) {
-  // nom du torrent sans chemin ni extension
-  const outputBase = path.parse(torrentPath).name;
+  const outputPath = torrentPath.replace(/\.torrent$/, '');
 
   const args = [
     'modify',
@@ -245,10 +244,11 @@ async function modifyTorrentTrackers(torrentPath) {
 
   TRACKERS.forEach(t => args.push('--tracker', t));
 
-  args.push('--output', outputBase);
+  args.push('--output', outputPath);
 
   await execAsync('mkbrr', args);
   trackersUpdated++;
+  console.log(`   ✅ ${path.basename(torrentPath)}`);
 }
 
 // ---------------------- UPDATE EXISTING TORRENTS ----------------------
