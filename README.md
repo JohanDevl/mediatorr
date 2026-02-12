@@ -1,118 +1,142 @@
-# 🧲 Torrentify
+# 🧲 Mediatorr
 
-**Torrentify** est un conteneur Docker qui génère automatiquement des fichiers
-**.torrent**, **.nfo** et des métadonnées **TMDb / iTunes** à partir de **films, séries et musiques**.
+**Mediatorr** is a Docker container that automatically generates **.torrent**, **.nfo**, and **TMDb / iTunes** metadata files from **films, series, and music**.
 
-Il surveille un ou plusieurs dossiers, analyse les noms de fichiers,
-récupère les informations depuis **TMDb** (films & séries) et **iTunes** (musiques),
-et prépare des fichiers propres et prêts à l'usage pour les **trackers privés** depuis une machine **Unraid**, **NAS** et **seedbox**.
+It monitors one or more directories, analyzes filenames, fetches metadata from **TMDb** (films & series) and **iTunes** (music), and prepares clean, ready-to-use files for **private trackers** on **Unraid**, **NAS**, and **seedbox** setups.
 
 ---
 
-## ✨ Fonctionnalités
+## ✨ Features
 
-- 🎬 Génération automatique de fichiers `.torrent` via `mkbrr`
-- 🧲 Trackers configurables avec mise à jour automatique des `.torrent` existants si les URLs changent
-- 📝 Création de fichiers `.nfo` (mediainfo, sans chemins absolus)
-- 📋 Copie automatique des `.nfo` source dans le dossier de sortie
-- 📄 Fichier `.txt` avec ID TMDb ou message explicite si non trouvé
-- 👀 Surveillance en temps réel via `inotifywait` (création, déplacement, écriture)
-- 📂 Support de **répertoires sources multiples** par type de média (ex: `/films` + `/films-4k`)
-- 🔄 Scan initial automatique au démarrage du conteneur
-- 🔍 Scan récursif des sous-dossiers
-- 🧠 Analyse intelligente des noms de fichiers (GuessIt)
-- 🎞️ Recherche **TMDb** (FR puis EN) et **iTunes** avec cache local persistant
-- 📦 Cache auto-recréé si supprimé ou corrompu
-- ⚙️ Activation indépendante des **films**, **séries** et des **musiques**
-- 🎯 Détection automatique saison vs série complète avec nombre de fichiers et taille totale dans le NFO
-- ⏳ Détection des téléchargements en cours (`.part`, `.tmp`, `.crdownload`)
-- 🔄 Détection des modifications de fichiers source (taille/mtime) avec retraitement automatique
-- ⚡ Traitement parallèle configurable
-- 📁 Sortie structurée par type (films / séries / musiques)
-- 🐳 Image Docker légère basée sur Alpine
-- 🧱 Compatible multi-architecture (`amd64` / `arm64`)
+- 🎬 Automatic `.torrent` file generation via mkbrr
+- 🧲 Configurable trackers with automatic update of existing `.torrent` files when URLs change
+- 📝 NFO file generation with mediainfo (absolute paths sanitized)
+- 📋 Automatic copy of source NFO files to output directory
+- 📄 `.txt` file with TMDb/iTunes ID or explicit "not found" message
+- 👀 Real-time monitoring via inotifywait (create, move, write events)
+- 📂 Support for multiple source directories per media type (e.g., `/films` + `/films-4k`)
+- 🔄 Automatic initial scan on container startup
+- 🔍 Recursive subdirectory scanning
+- 🧠 Intelligent filename analysis via GuessIt
+- 🎞️ TMDb lookup (FR then EN fallback) and iTunes lookup with persistent local cache
+- 📦 Cache auto-recovery when corrupted or deleted
+- ⚙️ Independent activation of films, series, and music
+- 🎯 Automatic season vs full series detection with file count and total size in NFO
+- ⏳ In-progress download detection (`.part`, `.tmp`, `.crdownload`)
+- 🔄 Source file change detection (size/mtime) with automatic reprocessing
+- ⚡ Configurable parallel processing
+- 📁 Structured output by media type (films / series / music)
+- 🐳 Lightweight Alpine-based Docker image
+- 🧱 Multi-architecture support (amd64 / arm64)
 
 ---
 
-## ⚙️ Variables d'environnement
+## 🚀 Quick Start
 
-### Requises
+```yaml
+services:
+  mediatorr:
+    image: johandevl/mediatorr:latest
+    container_name: mediatorr
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - ENABLE_FILMS=true
+      - ENABLE_SERIES=false
+      - ENABLE_MUSIQUES=false
+      - TMDB_API_KEY=your_tmdb_api_key
+      - TRACKERS=https://your-tracker.com/announce
+    volumes:
+      - /path/to/films:/films
+      - /path/to/output:/data
+```
 
-| Variable | Description |
-|--------|------------|
-| `TRACKERS` | URLs des trackers (séparées par des virgules) |
-| `TMDB_API_KEY` | Clé API TMDb (requis si films ou séries activés) |
+---
 
-### Activation des médias
+## ⚙️ Environment Variables
 
-| Variable | Description |
-|--------|------------|
-| `ENABLE_FILMS` | Active le traitement et la surveillance des films (`true` / `false`) |
-| `ENABLE_SERIES` | Active le traitement et la surveillance des séries (`true` / `false`) |
-| `ENABLE_MUSIQUES` | Active le traitement et la surveillance des musiques (`true` / `false`) |
-
-> ⚠️ **Au moins un des trois** doit être activé.
-
-### Répertoires sources (optionnel)
-
-| Variable | Description |
-|--------|------------|
-| `FILMS_DIRS` | Répertoires source des films, séparés par virgules (défaut : `/films`) |
-| `SERIES_DIRS` | Répertoires source des séries, séparés par virgules (défaut : `/series`) |
-| `MUSIQUES_DIRS` | Répertoires source des musiques, séparés par virgules (défaut : `/musiques`) |
-
-> Permet de surveiller plusieurs dossiers par type, ex: `FILMS_DIRS=/films,/films-4k`
-
-### Optionnelles
+### Required
 
 | Variable | Description |
-|--------|------------|
-| `PARALLEL_JOBS` | Nombre de fichiers traités en parallèle (défaut : `1`) |
-| `SCAN_COOLDOWN` | Délai en secondes entre deux scans consécutifs (défaut : `5`) |
-| `PUID` | User ID du processus dans le conteneur (défaut : `99`) |
-| `PGID` | Group ID du processus dans le conteneur (défaut : `100`) |
+|----------|-------------|
+| `TRACKERS` | Tracker announce URLs (comma-separated) |
+| `TMDB_API_KEY` | TMDb API key (required if films or series enabled) |
+
+### Media Activation
+
+| Variable | Description |
+|----------|-------------|
+| `ENABLE_FILMS` | Enable film processing and monitoring (true/false) |
+| `ENABLE_SERIES` | Enable series processing and monitoring (true/false) |
+| `ENABLE_MUSIQUES` | Enable music processing and monitoring (true/false) |
+
+> ⚠️ At least one of the three must be enabled.
+
+### Source Directories (optional)
+
+| Variable | Description |
+|----------|-------------|
+| `FILMS_DIRS` | Film source directories, comma-separated (default: /films) |
+| `SERIES_DIRS` | Series source directories, comma-separated (default: /series) |
+| `MUSIQUES_DIRS` | Music source directories, comma-separated (default: /musiques) |
+
+> Allows monitoring multiple directories per type, e.g., `FILMS_DIRS=/films,/films-4k`
+
+### Optional
+
+| Variable | Description |
+|----------|-------------|
+| `PARALLEL_JOBS` | Number of files processed concurrently (default: 1) |
+| `SCAN_COOLDOWN` | Seconds between consecutive scans (default: 5) |
+| `PUID` | User ID for the container process |
+| `PGID` | Group ID for the container process |
 
 ---
 
 ## 📁 Volumes
 
-### 📥 Entrée (médias)
+### 📥 Input (media)
 
-| Chemin conteneur | Description |
-|-----------------|------------|
-| `/films` | Dossier des films par défaut (configurable via `FILMS_DIRS`) |
-| `/series` | Dossier des séries par défaut (configurable via `SERIES_DIRS`) |
-| `/musiques` | Dossier des musiques par défaut (configurable via `MUSIQUES_DIRS`) |
+| Container Path | Description |
+|---------------|-------------|
+| `/films` | Default films directory (configurable via FILMS_DIRS) |
+| `/series` | Default series directory (configurable via SERIES_DIRS) |
+| `/musiques` | Default music directory (configurable via MUSIQUES_DIRS) |
 
-### 📤 Sortie
+### 📤 Output
 
-| Chemin conteneur | Description |
-|-----------------|------------|
-| `/data` | Torrents, NFO, fichiers TXT générés et caches API |
+| Container Path | Description |
+|---------------|-------------|
+| `/data` | Generated torrents, NFOs, TXT files, and API caches |
 
 ---
 
-## 📂 Structure générée
+## 📂 Output Structure
 
-```text
-data/
-├── films/
-│   └── Nom.Film/
-│       ├── Nom.Film.torrent
-│       ├── Nom.Film.nfo
-│       ├── Nom.Film.source.nfo    ← copie du NFO source (si présent)
-│       └── Nom.Film.txt
-├── series/
-│   └── Nom.Serie.S01/
-│       ├── Nom.Serie.S01.torrent
-│       ├── Nom.Serie.S01.nfo
-│       ├── Nom.Serie.S01.source.nfo
-│       └── Nom.Serie.S01.txt
-├── musiques/
-│   └── Nom.Album/
-│       ├── Nom.Album.torrent
-│       ├── Nom.Album.nfo
-│       └── Nom.Album.txt
+```
+/data/
+├── torrent/
+│   ├── films/
+│   │   └── Film.Name/
+│   │       ├── Film.Name.torrent
+│   │       ├── Film.Name.nfo
+│   │       ├── Film.Name.source.nfo    (copy of source NFO if present)
+│   │       ├── Film.Name.txt
+│   │       └── Film.Name.srcinfo       (source change tracking)
+│   ├── series/
+│   │   └── Serie.Name.S01/
+│   │       ├── Serie.Name.S01.torrent
+│   │       ├── Serie.Name.S01.nfo
+│   │       ├── Serie.Name.S01.source.nfo
+│   │       ├── Serie.Name.S01.txt
+│   │       └── Serie.Name.S01.srcinfo
+│   └── musiques/
+│       └── Album.Name/
+│           ├── Album.Name.torrent
+│           ├── Album.Name.nfo
+│           ├── Album.Name.txt
+│           └── Album.Name.srcinfo
 ├── cache_tmdb/
 │   └── *.json
 ├── cache_itunes/
@@ -122,57 +146,65 @@ data/
 
 ---
 
-## 🚀 Exemple docker-compose
+## 🚀 Full docker-compose Example
 
 ```yaml
 services:
-  torrentify:
-    image: johandevl/torrentify:latest
-    container_name: torrentify
+  mediatorr:
+    image: johandevl/mediatorr:latest
+    container_name: mediatorr
     restart: unless-stopped
-
-    user: "1000:1000"
-
     environment:
-      # Activation des médias
+      # User mapping
+      - PUID=1000
+      - PGID=1000
+      # Media activation
       - ENABLE_FILMS=true
       - ENABLE_SERIES=false
       - ENABLE_MUSIQUES=true
       # TMDb
-      - TMDB_API_KEY=votre_cle_tmdb
-      # Trackers (séparés par virgules)
+      - TMDB_API_KEY=your_tmdb_api_key
+      # Trackers (comma-separated)
       - TRACKERS=https://tracker1/announce,https://tracker2/announce
-      # Répertoires sources multiples (optionnel, séparés par virgules)
+      # Multiple source directories (optional, comma-separated)
       # - FILMS_DIRS=/films,/films-4k
       # - SERIES_DIRS=/series,/series-4k
-      # Optionnel
+      # Optional
       - PARALLEL_JOBS=1
-
     volumes:
-      # Entrées
+      # Input
       - /source/films:/films
       - /source/series:/series
       - /source/musiques:/musiques
-      # Entrées supplémentaires (décommenter si multi-répertoire)
+      # Additional inputs (uncomment for multi-directory)
       # - /source/films-4k:/films-4k
       # - /source/series-4k:/series-4k
-
-      # Sorties
+      # Output
       - /destination/torrent:/data
 ```
 
 ---
 
-## 🔧 Gestion des trackers
+## 📖 Documentation
 
-Au démarrage, Torrentify calcule un fingerprint SHA256 des URLs de trackers configurées. Si les trackers ont changé depuis le dernier lancement, tous les fichiers `.torrent` existants sont automatiquement mis à jour avec les nouvelles URLs via `mkbrr modify`.
+For more details, see the full documentation:
+
+- [Architecture](docs/architecture.md) -- Technical internals and design
+- [Features](docs/features.md) -- Complete feature documentation
+- [Installation Guide](docs/installation.md) -- Detailed setup, configuration, and troubleshooting
+
+---
+
+## 🔧 Tracker Management
+
+On startup, Mediatorr computes a SHA256 fingerprint of the configured tracker URLs. If trackers have changed since the last run, all existing `.torrent` files are automatically updated with the new URLs via `mkbrr modify`.
 
 ---
 
 ## 📝 Notes
 
-- **Films** : un fichier = un torrent, recherche TMDb
-- **Séries** : un dossier = un torrent, détection automatique saison/série, recherche TMDb
-- **Musiques** : un album (dossier ou fichier) = un torrent, recherche iTunes, attente fin des `.part`
-- Les fichiers déjà traités ne sont jamais régénérés
-- Les caches API sont persistants et auto-réparés
+- **Films**: one file = one torrent, TMDb lookup
+- **Series**: one folder = one torrent, automatic season/series detection, TMDb lookup
+- **Music**: one album (folder or file) = one torrent, iTunes lookup, waits for `.part` completion
+- Already processed files are never regenerated (unless source changes detected)
+- API caches are persistent and auto-repaired
