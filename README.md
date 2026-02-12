@@ -39,8 +39,9 @@ services:
     image: johandevl/mediatorr:latest
     container_name: mediatorr
     restart: unless-stopped
-    user: "1000:1000"
     environment:
+      - PUID=1000
+      - PGID=1000
       - ENABLE_FILMS=true
       - ENABLE_SERIES=false
       - ENABLE_MUSIQUES=false
@@ -153,8 +154,10 @@ services:
     image: johandevl/mediatorr:latest
     container_name: mediatorr
     restart: unless-stopped
-    user: "1000:1000"
     environment:
+      # User mapping
+      - PUID=1000
+      - PGID=1000
       # Media activation
       - ENABLE_FILMS=true
       - ENABLE_SERIES=false

@@ -24,8 +24,9 @@ services:
     image: johandevl/mediatorr:latest
     container_name: mediatorr
     restart: unless-stopped
-    user: "1000:1000"
     environment:
+      - PUID=1000
+      - PGID=1000
       - ENABLE_FILMS=true
       - ENABLE_SERIES=false
       - ENABLE_MUSIQUES=false
@@ -58,8 +59,9 @@ services:
     image: johandevl/mediatorr:latest
     container_name: mediatorr
     restart: unless-stopped
-    user: "1000:1000"
     environment:
+      - PUID=1000
+      - PGID=1000
       - ENABLE_FILMS=true
       - ENABLE_SERIES=true
       - ENABLE_MUSIQUES=true
@@ -126,25 +128,9 @@ The `/data` volume is mandatory and stores:
 
 Ensure the mounted directory is writable by the container user.
 
-## User Permissions and PUID/PGID
+## User Permissions (PUID/PGID)
 
-### Docker User Mode (Recommended)
-
-The simplest approach is to specify the user directly:
-
-```yaml
-user: "1000:1000"
-```
-
-Replace `1000:1000` with your UID:GID. To find your user ID:
-
-```bash
-id
-```
-
-### PUID/PGID Environment Variables
-
-For NAS systems requiring user/group mapping, use `PUID` and `PGID`:
+Set `PUID` and `PGID` environment variables to match your host user:
 
 ```yaml
 environment:
@@ -152,17 +138,15 @@ environment:
   - PGID=1000
 ```
 
-The container's entrypoint creates the user/group with these IDs.
+The container's entrypoint creates the user/group with these IDs. To find your user ID:
+
+```bash
+id
+```
 
 ### Unraid-specific
 
 On Unraid, use:
-
-```yaml
-user: "99:100"  # nobody:users
-```
-
-Or set:
 
 ```yaml
 environment:
