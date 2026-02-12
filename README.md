@@ -1,4 +1,4 @@
-# Mediatorr
+# 🧲 Mediatorr
 
 **Mediatorr** is a Docker container that automatically generates **.torrent**, **.nfo**, and **TMDb / iTunes** metadata files from **films, series, and music**.
 
@@ -6,32 +6,32 @@ It monitors one or more directories, analyzes filenames, fetches metadata from *
 
 ---
 
-## Features
+## ✨ Features
 
-- Automatic `.torrent` file generation via mkbrr
-- Configurable trackers with automatic update of existing `.torrent` files when URLs change
-- NFO file generation with mediainfo (absolute paths sanitized)
-- Automatic copy of source NFO files to output directory
-- `.txt` file with TMDb/iTunes ID or explicit "not found" message
-- Real-time monitoring via inotifywait (create, move, write events)
-- Support for multiple source directories per media type (e.g., `/films` + `/films-4k`)
-- Automatic initial scan on container startup
-- Recursive subdirectory scanning
-- Intelligent filename analysis via GuessIt
-- TMDb lookup (FR then EN fallback) and iTunes lookup with persistent local cache
-- Cache auto-recovery when corrupted or deleted
-- Independent activation of films, series, and music
-- Automatic season vs full series detection with file count and total size in NFO
-- In-progress download detection (`.part`, `.tmp`, `.crdownload`)
-- Source file change detection (size/mtime) with automatic reprocessing
-- Configurable parallel processing
-- Structured output by media type (films / series / music)
-- Lightweight Alpine-based Docker image
-- Multi-architecture support (amd64 / arm64)
+- 🎬 Automatic `.torrent` file generation via mkbrr
+- 🧲 Configurable trackers with automatic update of existing `.torrent` files when URLs change
+- 📝 NFO file generation with mediainfo (absolute paths sanitized)
+- 📋 Automatic copy of source NFO files to output directory
+- 📄 `.txt` file with TMDb/iTunes ID or explicit "not found" message
+- 👀 Real-time monitoring via inotifywait (create, move, write events)
+- 📂 Support for multiple source directories per media type (e.g., `/films` + `/films-4k`)
+- 🔄 Automatic initial scan on container startup
+- 🔍 Recursive subdirectory scanning
+- 🧠 Intelligent filename analysis via GuessIt
+- 🎞️ TMDb lookup (FR then EN fallback) and iTunes lookup with persistent local cache
+- 📦 Cache auto-recovery when corrupted or deleted
+- ⚙️ Independent activation of films, series, and music
+- 🎯 Automatic season vs full series detection with file count and total size in NFO
+- ⏳ In-progress download detection (`.part`, `.tmp`, `.crdownload`)
+- 🔄 Source file change detection (size/mtime) with automatic reprocessing
+- ⚡ Configurable parallel processing
+- 📁 Structured output by media type (films / series / music)
+- 🐳 Lightweight Alpine-based Docker image
+- 🧱 Multi-architecture support (amd64 / arm64)
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
 ```yaml
 services:
@@ -53,32 +53,32 @@ services:
 
 ---
 
-## Environment Variables
+## ⚙️ Environment Variables
 
 ### Required
 
 | Variable | Description |
 |----------|-------------|
-| TRACKERS | Tracker announce URLs (comma-separated) |
-| TMDB_API_KEY | TMDb API key (required if films or series enabled) |
+| `TRACKERS` | Tracker announce URLs (comma-separated) |
+| `TMDB_API_KEY` | TMDb API key (required if films or series enabled) |
 
 ### Media Activation
 
 | Variable | Description |
 |----------|-------------|
-| ENABLE_FILMS | Enable film processing and monitoring (true/false) |
-| ENABLE_SERIES | Enable series processing and monitoring (true/false) |
-| ENABLE_MUSIQUES | Enable music processing and monitoring (true/false) |
+| `ENABLE_FILMS` | Enable film processing and monitoring (true/false) |
+| `ENABLE_SERIES` | Enable series processing and monitoring (true/false) |
+| `ENABLE_MUSIQUES` | Enable music processing and monitoring (true/false) |
 
-> At least one of the three must be enabled.
+> ⚠️ At least one of the three must be enabled.
 
 ### Source Directories (optional)
 
 | Variable | Description |
 |----------|-------------|
-| FILMS_DIRS | Film source directories, comma-separated (default: /films) |
-| SERIES_DIRS | Series source directories, comma-separated (default: /series) |
-| MUSIQUES_DIRS | Music source directories, comma-separated (default: /musiques) |
+| `FILMS_DIRS` | Film source directories, comma-separated (default: /films) |
+| `SERIES_DIRS` | Series source directories, comma-separated (default: /series) |
+| `MUSIQUES_DIRS` | Music source directories, comma-separated (default: /musiques) |
 
 > Allows monitoring multiple directories per type, e.g., `FILMS_DIRS=/films,/films-4k`
 
@@ -86,32 +86,32 @@ services:
 
 | Variable | Description |
 |----------|-------------|
-| PARALLEL_JOBS | Number of files processed concurrently (default: 1) |
-| SCAN_COOLDOWN | Seconds between consecutive scans (default: 5) |
-| PUID | User ID for the container process |
-| PGID | Group ID for the container process |
+| `PARALLEL_JOBS` | Number of files processed concurrently (default: 1) |
+| `SCAN_COOLDOWN` | Seconds between consecutive scans (default: 5) |
+| `PUID` | User ID for the container process |
+| `PGID` | Group ID for the container process |
 
 ---
 
-## Volumes
+## 📁 Volumes
 
-### Input (media)
-
-| Container Path | Description |
-|---------------|-------------|
-| /films | Default films directory (configurable via FILMS_DIRS) |
-| /series | Default series directory (configurable via SERIES_DIRS) |
-| /musiques | Default music directory (configurable via MUSIQUES_DIRS) |
-
-### Output
+### 📥 Input (media)
 
 | Container Path | Description |
 |---------------|-------------|
-| /data | Generated torrents, NFOs, TXT files, and API caches |
+| `/films` | Default films directory (configurable via FILMS_DIRS) |
+| `/series` | Default series directory (configurable via SERIES_DIRS) |
+| `/musiques` | Default music directory (configurable via MUSIQUES_DIRS) |
+
+### 📤 Output
+
+| Container Path | Description |
+|---------------|-------------|
+| `/data` | Generated torrents, NFOs, TXT files, and API caches |
 
 ---
 
-## Output Structure
+## 📂 Output Structure
 
 ```
 /data/
@@ -145,7 +145,7 @@ services:
 
 ---
 
-## Full docker-compose Example
+## 🚀 Full docker-compose Example
 
 ```yaml
 services:
@@ -182,7 +182,7 @@ services:
 
 ---
 
-## Documentation
+## 📖 Documentation
 
 For more details, see the full documentation:
 
@@ -192,13 +192,13 @@ For more details, see the full documentation:
 
 ---
 
-## Tracker Management
+## 🔧 Tracker Management
 
 On startup, Mediatorr computes a SHA256 fingerprint of the configured tracker URLs. If trackers have changed since the last run, all existing `.torrent` files are automatically updated with the new URLs via `mkbrr modify`.
 
 ---
 
-## Notes
+## 📝 Notes
 
 - **Films**: one file = one torrent, TMDb lookup
 - **Series**: one folder = one torrent, automatic season/series detection, TMDb lookup
