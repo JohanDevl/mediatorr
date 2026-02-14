@@ -706,7 +706,7 @@ function buildRatingSection(voteAverage, voteCount, tmdbId, tmdbType) {
     bb += `[img]https://img.streetprez.com/note/${score}.svg[/img] [i]${voteAverage.toFixed(2)} (${voteCount || 0})[/i]\n\n`;
   }
   const typeSlug = tmdbType === 'tv' ? 'tv' : 'movie';
-  bb += ` [url=https://www.themoviedb.org/${typeSlug}/${tmdbId}][img]${PREZ_IMAGES.link}[/img][/url] │\n\n`;
+  bb += ` [url=https://www.themoviedb.org/${typeSlug}/${tmdbId}][img]${PREZ_IMAGES.link}[/img][/url]\n\n`;
   return bb;
 }
 
@@ -832,7 +832,7 @@ function generateMusiquePrez(name, nfoContent, itunesData, fileSize, fileCount) 
   bb += `[b][color=#3d85c6]Date de sortie :[/color][/b] [i]${releaseDate}[/i]\n`;
   bb += `[b][color=#3d85c6]Genre :[/color][/b] [i]${genre}[/i]\n`;
   bb += `[b][color=#3d85c6]Nombre de pistes :[/color][/b] [i]${trackCount}[/i]\n`;
-  if (collectionViewUrl) bb += `\n [url=${collectionViewUrl}][img]${PREZ_IMAGES.link}[/img][/url] │\n`;
+  if (collectionViewUrl) bb += `\n [url=${collectionViewUrl}][img]${PREZ_IMAGES.link}[/img][/url]\n`;
   bb += `\n`;
 
   bb += `[img]${PREZ_IMAGES.serie}[/img]\n`;
