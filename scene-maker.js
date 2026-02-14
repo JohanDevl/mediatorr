@@ -329,7 +329,31 @@ function langCodeToName(code) {
     'greek': 'Grec', 'gre': 'Grec', 'ell': 'Grec', 'el': 'Grec',
     'hebrew': 'Hébreu', 'heb': 'Hébreu', 'he': 'Hébreu',
     'hungarian': 'Hongrois', 'hun': 'Hongrois', 'hu': 'Hongrois',
-    'romanian': 'Roumain', 'rum': 'Roumain', 'ron': 'Roumain', 'ro': 'Roumain'
+    'romanian': 'Roumain', 'rum': 'Roumain', 'ron': 'Roumain', 'ro': 'Roumain',
+    'thai': 'Thaï', 'tha': 'Thaï', 'th': 'Thaï',
+    'vietnamese': 'Vietnamien', 'vie': 'Vietnamien', 'vi': 'Vietnamien',
+    'indonesian': 'Indonésien', 'ind': 'Indonésien', 'id': 'Indonésien',
+    'malay': 'Malais', 'msa': 'Malais', 'may': 'Malais', 'ms': 'Malais',
+    'bulgarian': 'Bulgare', 'bul': 'Bulgare', 'bg': 'Bulgare',
+    'croatian': 'Croate', 'hrv': 'Croate', 'hr': 'Croate',
+    'serbian': 'Serbe', 'srp': 'Serbe', 'sr': 'Serbe',
+    'slovak': 'Slovaque', 'slk': 'Slovaque', 'slo': 'Slovaque', 'sk': 'Slovaque',
+    'slovenian': 'Slovène', 'slv': 'Slovène', 'sl': 'Slovène',
+    'ukrainian': 'Ukrainien', 'ukr': 'Ukrainien', 'uk': 'Ukrainien',
+    'catalan': 'Catalan', 'cat': 'Catalan', 'ca': 'Catalan',
+    'estonian': 'Estonien', 'est': 'Estonien', 'et': 'Estonien',
+    'latvian': 'Letton', 'lav': 'Letton', 'lv': 'Letton',
+    'lithuanian': 'Lituanien', 'lit': 'Lituanien', 'lt': 'Lituanien',
+    'icelandic': 'Islandais', 'isl': 'Islandais', 'ice': 'Islandais', 'is': 'Islandais',
+    'georgian': 'Géorgien', 'kat': 'Géorgien', 'geo': 'Géorgien', 'ka': 'Géorgien',
+    'armenian': 'Arménien', 'hye': 'Arménien', 'arm': 'Arménien', 'hy': 'Arménien',
+    'persian': 'Persan', 'fas': 'Persan', 'per': 'Persan', 'fa': 'Persan',
+    'bengali': 'Bengali', 'ben': 'Bengali', 'bn': 'Bengali',
+    'tamil': 'Tamoul', 'tam': 'Tamoul', 'ta': 'Tamoul',
+    'telugu': 'Télougou', 'tel': 'Télougou', 'te': 'Télougou',
+    'urdu': 'Ourdou', 'urd': 'Ourdou', 'ur': 'Ourdou',
+    'tagalog': 'Tagalog', 'tgl': 'Tagalog', 'tl': 'Tagalog',
+    'brazilian': 'Brésilien', 'pt-br': 'Brésilien'
   };
   return langMap[c] || (c.charAt(0).toUpperCase() + c.slice(1));
 }
@@ -357,7 +381,7 @@ function parseAudioTracks(mediainfoRaw) {
       langName = langCodeToName(langMatch[1]);
     }
     if (langName) {
-      const flag = LANG_FLAGS[langName] || '🏳️';
+      const flag = langFlag(langName);
       const trackInfo = langType ? `${flag} ${langName} (${langType})` : `${flag} ${langName}`;
       if (!tracks.includes(trackInfo)) tracks.push(trackInfo);
     }
@@ -392,7 +416,7 @@ function parseSubtitleTracks(mediainfoRaw) {
   }
   const result = [];
   for (const [lang, types] of langTypes) {
-    const flag = LANG_FLAGS[lang] || '🏳️';
+    const flag = langFlag(lang);
     if (types.size === 0) {
       result.push(`${flag} ${lang}`);
     } else {
@@ -485,7 +509,7 @@ function parseNfoTechnical(mediainfoRaw, releaseName) {
     if (audioLangs.length) {
       const langs = [...new Set(audioLangs.map(m => {
         const name = langCodeToName(m[1]);
-        const flag = LANG_FLAGS[name] || '🏳️';
+        const flag = langFlag(name);
         return `${flag} ${name}`;
       }))];
       info.languages = langs.join(', ');
@@ -500,7 +524,7 @@ function parseNfoTechnical(mediainfoRaw, releaseName) {
     if (textLangs.length) {
       const subs = [...new Set(textLangs.map(m => {
         const name = langCodeToName(m[1]);
-        const flag = LANG_FLAGS[name] || '🏳️';
+        const flag = langFlag(name);
         return `${flag} ${name}`;
       }))];
       info.subtitles = subs.join(', ');
@@ -528,14 +552,30 @@ function escapeBBCode(str) {
 
 const GITHUB_URL = 'https://github.com/JohanDevl/mediatorr';
 
-const LANG_FLAGS = {
-  'Français': '🇫🇷', 'Anglais': '🇬🇧', 'Allemand': '🇩🇪', 'Espagnol': '🇪🇸',
-  'Italien': '🇮🇹', 'Japonais': '🇯🇵', 'Coréen': '🇰🇷', 'Portugais': '🇵🇹',
-  'Russe': '🇷🇺', 'Chinois': '🇨🇳', 'Arabe': '🇸🇦', 'Néerlandais': '🇳🇱',
-  'Polonais': '🇵🇱', 'Turc': '🇹🇷', 'Hindi': '🇮🇳', 'Suédois': '🇸🇪',
-  'Norvégien': '🇳🇴', 'Danois': '🇩🇰', 'Finnois': '🇫🇮', 'Grec': '🇬🇷',
-  'Hongrois': '🇭🇺', 'Roumain': '🇷🇴', 'Tchèque': '🇨🇿'
+const LANG_TO_COUNTRY = {
+  'Français': 'FR', 'Anglais': 'GB', 'Allemand': 'DE', 'Espagnol': 'ES',
+  'Italien': 'IT', 'Japonais': 'JP', 'Coréen': 'KR', 'Portugais': 'PT',
+  'Russe': 'RU', 'Chinois': 'CN', 'Arabe': 'SA', 'Néerlandais': 'NL',
+  'Polonais': 'PL', 'Turc': 'TR', 'Hindi': 'IN', 'Suédois': 'SE',
+  'Norvégien': 'NO', 'Danois': 'DK', 'Finnois': 'FI', 'Grec': 'GR',
+  'Hongrois': 'HU', 'Roumain': 'RO', 'Tchèque': 'CZ', 'Hébreu': 'IL',
+  'Thaï': 'TH', 'Vietnamien': 'VN', 'Indonésien': 'ID', 'Malais': 'MY',
+  'Bulgare': 'BG', 'Croate': 'HR', 'Serbe': 'RS', 'Slovaque': 'SK',
+  'Slovène': 'SI', 'Ukrainien': 'UA', 'Catalan': 'ES', 'Basque': 'ES',
+  'Estonien': 'EE', 'Letton': 'LV', 'Lituanien': 'LT', 'Islandais': 'IS',
+  'Géorgien': 'GE', 'Arménien': 'AM', 'Persan': 'IR', 'Bengali': 'BD',
+  'Tamoul': 'LK', 'Télougou': 'IN', 'Ourdou': 'PK', 'Tagalog': 'PH',
+  'Brésilien': 'BR'
 };
+
+function countryToFlag(countryCode) {
+  return [...countryCode.toUpperCase()].map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('');
+}
+
+function langFlag(langName) {
+  const cc = LANG_TO_COUNTRY[langName];
+  return cc ? countryToFlag(cc) : '🏳️';
+}
 
 const CODEC_NAMES = {
   'E-AC-3': 'Dolby Digital Plus / E-AC3', 'AC-3': 'Dolby Digital / AC3',
@@ -582,7 +622,7 @@ function parseDetailedAudioTracks(mediainfoRaw) {
     if (codec === 'MLP FBA' || codec === 'MLP FBA 16-ch') codec = 'TrueHD';
     const bitrate = bitrateMatch ? bitrateMatch[1].trim() : null;
 
-    const flag = LANG_FLAGS[langName] || '🏳️';
+    const flag = langFlag(langName);
     const codecName = codec ? (CODEC_NAMES[codec] || codec) : 'N/A';
     const channelStr = channels ? ` [${channels}]` : '';
     const bitrateStr = bitrate ? ` @ ${bitrate}` : '';
@@ -605,7 +645,7 @@ function formatDetailedSubtitles(mediainfoRaw) {
     const forcedMatch = block.match(/Forced\s*:\s*(\w+)/);
     if (!langMatch) continue;
     const langName = langCodeToName(langMatch[1]);
-    const flag = LANG_FLAGS[langName] || '🏳️';
+    const flag = langFlag(langName);
     let type = '';
     if (titleMatch) {
       const t = titleMatch[1].trim().toLowerCase();
