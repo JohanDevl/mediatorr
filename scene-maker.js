@@ -23,7 +23,8 @@ const ENABLE_PREZ = process.env.ENABLE_PREZ !== 'false';
 const PREZ_IMAGES = {
   info: 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/infos.png',
   synopsis: 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/pitch.png',
-  technical: 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/serie.png',
+  movie: 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/movie.png',
+  serie: 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/serie.png',
   size: 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/download.png',
   link: 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/tmdb.png'
 };
@@ -656,8 +657,9 @@ function buildSynopsisSection(overview) {
   return bb;
 }
 
-function buildTechnicalSection(tech, nfoContent) {
-  let bb = `[img]${PREZ_IMAGES.technical}[/img]\n`;
+function buildTechnicalSection(tech, nfoContent, mediaType) {
+  const techImg = mediaType === 'film' ? PREZ_IMAGES.movie : PREZ_IMAGES.serie;
+  let bb = `[img]${techImg}[/img]\n`;
   bb += `[b][color=#3d85c6]Release source :[/color][/b] [i]${tech.source}[/i]\n`;
   bb += `[b][color=#3d85c6]Qualité vidéo :[/color][/b] [i]${tech.quality}[/i]\n`;
   bb += `[b][color=#3d85c6]Format vidéo :[/color][/b] [i]${tech.format}[/i]\n`;
@@ -715,7 +717,7 @@ function generateFilmPrez(name, nfoContent, tmdbData, fileSize, fileCount) {
   bb += buildCastSection(tmdbData.credits, 'movie');
   bb += buildRatingSection(tmdbData.vote_average, tmdbData.vote_count, tmdbData.id, 'movie');
   bb += buildSynopsisSection(escapeBBCode(tmdbData.overview));
-  bb += buildTechnicalSection(tech, nfoContent);
+  bb += buildTechnicalSection(tech, nfoContent, 'film');
   bb += buildSizeSection(fileSize, fileCount);
   bb += buildFooter();
 
@@ -743,7 +745,7 @@ function generateSeriePrez(name, nfoContent, tmdbData, fileSize, fileCount) {
   bb += buildCastSection(tmdbData.credits, 'tv');
   bb += buildRatingSection(tmdbData.vote_average, tmdbData.vote_count, tmdbData.id, 'tv');
   bb += buildSynopsisSection(escapeBBCode(tmdbData.overview));
-  bb += buildTechnicalSection(tech, nfoContent);
+  bb += buildTechnicalSection(tech, nfoContent, 'serie');
   bb += buildSizeSection(fileSize, fileCount);
   bb += buildFooter();
 
@@ -774,7 +776,7 @@ function generateMusiquePrez(name, nfoContent, itunesData, fileSize, fileCount) 
   if (collectionViewUrl) bb += `\n [url=${collectionViewUrl}][img]${PREZ_IMAGES.link}[/img][/url] │\n`;
   bb += `\n`;
 
-  bb += `[img]${PREZ_IMAGES.technical}[/img]\n`;
+  bb += `[img]${PREZ_IMAGES.serie}[/img]\n`;
   bb += `[b][color=#3d85c6]Codec Audio :[/color][/b] [i]${tech.audioCodec}[/i]\n\n`;
 
   bb += `[img]${PREZ_IMAGES.size}[/img]\n`;
