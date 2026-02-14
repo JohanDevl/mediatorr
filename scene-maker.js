@@ -786,10 +786,12 @@ function generateFilmPrez(name, nfoContent, tmdbData, fileSize, fileCount) {
 function generateSeriePrez(name, nfoContent, tmdbData, fileSize, fileCount) {
   const tech = parseNfoTechnical(nfoContent, name);
   const title = escapeBBCode(tmdbData.name) || 'N/A';
+  const seasonMatch = name.match(/[.\s-]S(\d{1,2})(?:[.\s-]|$)/i);
+  const seasonStr = seasonMatch ? ` - Saison ${parseInt(seasonMatch[1])}` : '';
   const year = tmdbData.first_air_date?.split('-')[0] || 'N/A';
   const tagline = tmdbData.tagline || '';
 
-  let bb = buildVideoPrezHeader(title, year, tmdbData.poster_path, tagline);
+  let bb = buildVideoPrezHeader(`${title}${seasonStr}`, year, tmdbData.poster_path, tagline);
 
   const creators = tmdbData.created_by?.map(c => escapeBBCode(c.name)).join(', ') || null;
   bb += buildInfoSection([
