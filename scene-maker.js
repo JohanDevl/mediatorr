@@ -20,13 +20,14 @@ const ENABLE_SERIES = process.env.ENABLE_SERIES === 'true';
 const ENABLE_MUSIQUES = process.env.ENABLE_MUSIQUES === 'true';
 const ENABLE_PREZ = process.env.ENABLE_PREZ !== 'false';
 
+const PREZ_IMG_BASE = 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images';
 const PREZ_IMAGES = {
-  info: 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/infos.png',
-  synopsis: 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/pitch.png',
-  movie: 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/movie.png',
-  serie: 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/serie.png',
-  size: 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/download.png',
-  link: 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/tmdb.png'
+  info: process.env.PREZ_IMG_INFO || `${PREZ_IMG_BASE}/infos.png`,
+  synopsis: process.env.PREZ_IMG_SYNOPSIS || `${PREZ_IMG_BASE}/pitch.png`,
+  movie: process.env.PREZ_IMG_MOVIE || `${PREZ_IMG_BASE}/movie.png`,
+  serie: process.env.PREZ_IMG_SERIE || `${PREZ_IMG_BASE}/serie.png`,
+  size: process.env.PREZ_IMG_SIZE || `${PREZ_IMG_BASE}/download.png`,
+  link: process.env.PREZ_IMG_LINK || `${PREZ_IMG_BASE}/tmdb.png`
 };
 
 function parseDirs(envVar, defaultDir) {
