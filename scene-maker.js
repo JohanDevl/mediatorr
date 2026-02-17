@@ -9,28 +9,49 @@ const qs = require('querystring');
 const fg = require('fast-glob');
 const stringSimilarity = require('string-similarity');
 
+// ---------------------- PERSISTENT CONFIG ----------------------
+const CONFIG_FILE = '/data/config.json';
+let persistentConfig = {};
+try {
+  if (fs.existsSync(CONFIG_FILE)) {
+    persistentConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+  }
+} catch (e) {
+  console.warn('⚠️ Error reading config.json, using env vars:', e.message);
+}
+
+function cfg(key, envKey, defaultVal) {
+  if (persistentConfig[key] !== undefined) return persistentConfig[key];
+  if (process.env[envKey] !== undefined) return process.env[envKey];
+  return defaultVal;
+}
+
 // ---------------------- CONFIG ----------------------
 const DEST_DIR = '/data/torrent';
 const CACHE_DIR = '/data/cache_tmdb';
 const CACHE_DIR_ITUNES = '/data/cache_itunes';
 const FINGERPRINT_FILE = '/data/trackers.fingerprint.sha256';
+const STATUS_FILE = '/data/status.json';
 
-const ENABLE_FILMS = process.env.ENABLE_FILMS === 'true';
-const ENABLE_SERIES = process.env.ENABLE_SERIES === 'true';
-const ENABLE_MUSIQUES = process.env.ENABLE_MUSIQUES === 'true';
-const ENABLE_PREZ = process.env.ENABLE_PREZ !== 'false';
+const ENABLE_FILMS = cfg('enableFilms', 'ENABLE_FILMS', false) === true || cfg('enableFilms', 'ENABLE_FILMS', 'false') === 'true';
+const ENABLE_SERIES = cfg('enableSeries', 'ENABLE_SERIES', false) === true || cfg('enableSeries', 'ENABLE_SERIES', 'false') === 'true';
+const ENABLE_MUSIQUES = cfg('enableMusiques', 'ENABLE_MUSIQUES', false) === true || cfg('enableMusiques', 'ENABLE_MUSIQUES', 'false') === 'true';
+const ENABLE_PREZ = cfg('enablePrez', 'ENABLE_PREZ', true) !== false && cfg('enablePrez', 'ENABLE_PREZ', 'true') !== 'false';
 
 const PREZ_IMG_BASE = 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images';
+const prezImgConfig = persistentConfig.prezImages || {};
 const PREZ_IMAGES = {
-  info: process.env.PREZ_IMG_INFO || `${PREZ_IMG_BASE}/infos.png`,
-  synopsis: process.env.PREZ_IMG_SYNOPSIS || `${PREZ_IMG_BASE}/pitch.png`,
-  movie: process.env.PREZ_IMG_MOVIE || `${PREZ_IMG_BASE}/movie.png`,
-  serie: process.env.PREZ_IMG_SERIE || `${PREZ_IMG_BASE}/serie.png`,
-  download: process.env.PREZ_IMG_DOWNLOAD || `${PREZ_IMG_BASE}/download.png`,
-  link: process.env.PREZ_IMG_LINK || `${PREZ_IMG_BASE}/tmdb.png`
+  info: prezImgConfig.info || process.env.PREZ_IMG_INFO || `${PREZ_IMG_BASE}/infos.png`,
+  synopsis: prezImgConfig.synopsis || process.env.PREZ_IMG_SYNOPSIS || `${PREZ_IMG_BASE}/pitch.png`,
+  movie: prezImgConfig.movie || process.env.PREZ_IMG_MOVIE || `${PREZ_IMG_BASE}/movie.png`,
+  serie: prezImgConfig.serie || process.env.PREZ_IMG_SERIE || `${PREZ_IMG_BASE}/serie.png`,
+  download: prezImgConfig.download || process.env.PREZ_IMG_DOWNLOAD || `${PREZ_IMG_BASE}/download.png`,
+  link: prezImgConfig.link || process.env.PREZ_IMG_LINK || `${PREZ_IMG_BASE}/tmdb.png`
 };
 
-function parseDirs(envVar, defaultDir) {
+function parseDirs(configKey, envVar, defaultDir) {
+  const configVal = persistentConfig[configKey];
+  if (Array.isArray(configVal) && configVal.length) return configVal;
   const raw = process.env[envVar];
   if (!raw || !raw.trim()) return [defaultDir];
   const dirs = [...new Set(raw.split(',').map(d => d.trim().replace(/\/+$/, '')).filter(Boolean))];
@@ -40,34 +61,35 @@ function parseDirs(envVar, defaultDir) {
 const MEDIA_CONFIG = [
   ENABLE_FILMS && {
     name: 'films',
-    sources: parseDirs('FILMS_DIRS', '/films'),
+    sources: parseDirs('filmsDirs', 'FILMS_DIRS', '/films'),
     dest: path.join(DEST_DIR, 'films')
   },
   ENABLE_MUSIQUES && {
     name: 'musiques',
-    sources: parseDirs('MUSIQUES_DIRS', '/musiques'),
+    sources: parseDirs('musiquesDirs', 'MUSIQUES_DIRS', '/musiques'),
     dest: path.join(DEST_DIR, 'musiques'),
     api: 'itunes'
   },
   ENABLE_SERIES && {
     name: 'series',
-    sources: parseDirs('SERIES_DIRS', '/series'),
+    sources: parseDirs('seriesDirs', 'SERIES_DIRS', '/series'),
     dest: path.join(DEST_DIR, 'series')
   }
 ].filter(Boolean);
 
-const TRACKERS = (process.env.TRACKERS || '')
-  .split(',')
-  .map(t => t.trim())
-  .filter(Boolean);
+const TRACKERS = (() => {
+  const configTrackers = persistentConfig.trackers;
+  if (Array.isArray(configTrackers) && configTrackers.length) return configTrackers;
+  return (process.env.TRACKERS || '').split(',').map(t => t.trim()).filter(Boolean);
+})();
   
 const TMDB_TYPE_BY_MEDIA = {
   films: 'movie',
   series: 'tv'
 };
 
-const TMDB_API_KEY = process.env.TMDB_API_KEY;
-const PARALLEL_JOBS = Math.max(1, parseInt(process.env.PARALLEL_JOBS || '1', 10));
+const TMDB_API_KEY = cfg('tmdbApiKey', 'TMDB_API_KEY', '');
+const PARALLEL_JOBS = Math.max(1, parseInt(cfg('parallelJobs', 'PARALLEL_JOBS', '1'), 10));
 const NEED_TMDB = MEDIA_CONFIG.some(m => m.name === 'films' || m.name === 'series');
 
 if (!TRACKERS.length || !MEDIA_CONFIG.length || (NEED_TMDB && !TMDB_API_KEY)) {
@@ -222,6 +244,12 @@ function formatDuration(ms) {
   const m = Math.floor(s / 60);
   const h = Math.floor(m / 60);
   return `${h}h ${m % 60}m ${s % 60}s`;
+}
+
+function writeStatus(data) {
+  try {
+    fs.writeFileSync(STATUS_FILE, JSON.stringify(data, null, 2));
+  } catch {}
 }
 
 // ---------------------- PREZ GENERATION ----------------------
@@ -1589,7 +1617,8 @@ async function runTasks(tasks, limit) {
 // ---------------------- MAIN ----------------------
 (async () => {
   console.log('🚀 Scan initial au démarrage');
-  
+  writeStatus({ state: 'running', startedAt: new Date().toISOString(), type: 'full' });
+
     // UPDATE TRACKERS AVANT TOUT
   await updateAllTorrentsIfNeeded();
   
@@ -1708,4 +1737,11 @@ console.log(`⚠️ iTunes manquants   : ${itunesMissing}`);
 console.log(`📜 Prez générées      : ${prezGenerated}`);
 console.log(`⏱️ Temps total        : ${formatDuration(totalTime)}`);
 console.log('==============================');
+
+writeStatus({
+  state: 'idle',
+  lastScan: new Date().toISOString(),
+  stats: { processed, skipped, reprocessed, tmdbFound, tmdbMissing, itunesFound, itunesMissing, prezGenerated },
+  duration: formatDuration(totalTime)
+});
 })();

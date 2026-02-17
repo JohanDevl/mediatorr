@@ -1,0 +1,53 @@
+<div class="page-dashboard">
+  <!-- Stats Grid -->
+  <div class="stat-grid mb-6">
+    <div class="stat-card" id="stat-films">
+      <div class="stat-value">-</div>
+      <div class="stat-label">Films</div>
+    </div>
+    <div class="stat-card" id="stat-series">
+      <div class="stat-value">-</div>
+      <div class="stat-label">Series</div>
+    </div>
+    <div class="stat-card" id="stat-musiques">
+      <div class="stat-value">-</div>
+      <div class="stat-label">Musiques</div>
+    </div>
+    <div class="stat-card" id="stat-size">
+      <div class="stat-value">-</div>
+      <div class="stat-label">Total Size</div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="card mb-6">
+    <h3 class="card-title">Actions</h3>
+    <div class="mt-4">
+      <button class="btn btn-primary" id="btn-scan">Lancer un scan</button>
+    </div>
+  </div>
+
+  <!-- Processing Status -->
+  <div class="card mb-6" id="processing-status">
+    <h3 class="card-title">Statut</h3>
+    <div id="status-content" class="mt-4">
+      <span class="badge badge-success">Idle</span>
+    </div>
+  </div>
+
+  <!-- Last Scan Stats -->
+  <div class="card mb-6" id="last-scan">
+    <h3 class="card-title">Dernier scan</h3>
+    <div id="last-scan-content" class="mt-4">-</div>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="card">
+    <h3 class="card-title">Activite recente</h3>
+    <div id="recent-activity" class="mt-4">
+      <div class="empty-state">
+        <div class="empty-state-message">Chargement...</div>
+      </div>
+    </div>
+  </div>
+</div>

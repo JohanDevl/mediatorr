@@ -4,6 +4,9 @@ services:
     container_name: mediatorr
     restart: unless-stopped
 
+    ports:
+      - "5765:5765"
+
     environment:
       # User mapping
       - PUID=1000
@@ -23,6 +26,9 @@ services:
       # - MUSIQUES_DIRS=/musiques
       # Optionnel
       - PARALLEL_JOBS=1
+      # Web interface
+      # - ENABLE_WEB=true
+      # - WEB_PORT=5765
       # - ENABLE_PREZ=true
       # Prez images (optional, override default GitHub-hosted images)
       # - PREZ_IMG_INFO=https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/infos.png

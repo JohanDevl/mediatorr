@@ -1,0 +1,49 @@
+<div class="page-media-detail">
+  <script>
+    window.__MEDIA_TYPE__ = '{{MEDIA_TYPE}}';
+    window.__MEDIA_NAME__ = '{{MEDIA_NAME}}';
+  </script>
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="/">Dashboard</a> /
+    <a href="/media/{{MEDIA_TYPE}}">{{MEDIA_TYPE}}</a> /
+    <span>{{MEDIA_NAME}}</span>
+  </div>
+
+  <!-- Header with actions -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xl); gap: var(--spacing-lg); flex-wrap: wrap;">
+    <h2 id="detail-title" style="margin: 0; font-size: 28px;">{{MEDIA_NAME}}</h2>
+    <div style="display: flex; gap: var(--spacing-md); flex-wrap: wrap;">
+      <button class="btn btn-primary" id="btn-regenerate">Regenerer</button>
+      <button class="btn btn-danger" id="btn-delete">Supprimer artefacts</button>
+    </div>
+  </div>
+
+  <!-- Metadata Panel (from TMDb/iTunes cache) -->
+  <div class="card" id="metadata-panel" style="margin-bottom: var(--spacing-xl);">
+    <h3 style="margin-top: 0; margin-bottom: var(--spacing-lg);">Metadata</h3>
+    <div id="metadata-content">
+      <div class="empty-state" style="min-height: 200px;">
+        <div class="spinner spinner-lg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- File Viewer with Tabs -->
+  <div class="card" style="margin-bottom: var(--spacing-xl);">
+    <h3 style="margin-top: 0; margin-bottom: var(--spacing-lg);">Fichiers</h3>
+    <div class="tabs" id="file-tabs"></div>
+    <div class="pre-viewer" id="file-viewer">
+      <div class="empty-state" style="min-height: 300px;">
+        <div class="empty-state-title">Selectionnez un fichier</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Source Info -->
+  <div class="card" id="source-info">
+    <h3 style="margin-top: 0;">Source</h3>
+    <div id="source-content" style="font-family: var(--font-mono); font-size: 13px; color: var(--text-secondary);">-</div>
+  </div>
+</div>

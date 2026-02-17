@@ -1,0 +1,150 @@
+<div class="page-config">
+  <div class="breadcrumb">
+    <a href="/">Dashboard</a> / <span>Configuration</span>
+  </div>
+
+  <form id="config-form">
+    <!-- Section: Trackers -->
+    <div class="card form-section">
+      <h3 class="form-section-title">Trackers</h3>
+      <div class="form-group">
+        <label class="form-label">Announce URLs (un par ligne)</label>
+        <textarea class="textarea" id="cfg-trackers" rows="4" placeholder="https://tracker1/announce&#10;https://tracker2/announce"></textarea>
+        <span class="form-help">URLs d'annonce des trackers prives, separees par ligne</span>
+      </div>
+    </div>
+
+    <!-- Section: API Keys -->
+    <div class="card form-section">
+      <h3 class="form-section-title">API Keys</h3>
+      <div class="form-group">
+        <label class="form-label">TMDb API Key</label>
+        <input type="password" class="input" id="cfg-tmdb-key" placeholder="Votre cle API TMDb">
+        <span class="form-help">Necessaire pour les films et series</span>
+      </div>
+    </div>
+
+    <!-- Section: Media Types -->
+    <div class="card form-section">
+      <h3 class="form-section-title">Types de media</h3>
+      <div class="form-group">
+        <label class="toggle-label">
+          <input type="checkbox" class="toggle" id="cfg-films">
+          <span class="toggle-switch"></span>
+          <span>Films</span>
+        </label>
+      </div>
+      <div class="form-group">
+        <label class="toggle-label">
+          <input type="checkbox" class="toggle" id="cfg-series">
+          <span class="toggle-switch"></span>
+          <span>Series</span>
+        </label>
+      </div>
+      <div class="form-group">
+        <label class="toggle-label">
+          <input type="checkbox" class="toggle" id="cfg-musiques">
+          <span class="toggle-switch"></span>
+          <span>Musiques</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Section: Directories -->
+    <div class="card form-section">
+      <h3 class="form-section-title">Repertoires</h3>
+      <div class="form-group">
+        <label class="form-label">Films (separes par virgule)</label>
+        <input type="text" class="input" id="cfg-films-dirs" placeholder="/films">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Series (separes par virgule)</label>
+        <input type="text" class="input" id="cfg-series-dirs" placeholder="/series">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Musiques (separes par virgule)</label>
+        <input type="text" class="input" id="cfg-musiques-dirs" placeholder="/musiques">
+      </div>
+    </div>
+
+    <!-- Section: Processing -->
+    <div class="card form-section">
+      <h3 class="form-section-title">Traitement</h3>
+      <div class="form-group">
+        <label class="toggle-label">
+          <input type="checkbox" class="toggle" id="cfg-prez">
+          <span class="toggle-switch"></span>
+          <span>Generer les fichiers prez (BBCode)</span>
+        </label>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Jobs paralleles</label>
+        <input type="number" class="input" id="cfg-parallel" min="1" max="10" value="1">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cooldown entre scans (secondes)</label>
+        <input type="number" class="input" id="cfg-cooldown" min="1" max="60" value="5">
+      </div>
+    </div>
+
+    <!-- Section: Prez Images -->
+    <div class="card form-section">
+      <h3 class="form-section-title">Images Prez (en-tetes BBCode)</h3>
+      <p class="form-help" style="margin-bottom: var(--spacing-lg);">URLs des images utilisees dans les presentations BBCode</p>
+
+      <div class="form-group">
+        <label class="form-label">Info</label>
+        <div class="input-with-preview">
+          <input type="url" class="input" id="cfg-img-info" placeholder="https://...">
+          <img class="img-preview" id="preview-info" src="" alt="preview">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Synopsis</label>
+        <div class="input-with-preview">
+          <input type="url" class="input" id="cfg-img-synopsis" placeholder="https://...">
+          <img class="img-preview" id="preview-synopsis" src="" alt="preview">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Movie</label>
+        <div class="input-with-preview">
+          <input type="url" class="input" id="cfg-img-movie" placeholder="https://...">
+          <img class="img-preview" id="preview-movie" src="" alt="preview">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Serie</label>
+        <div class="input-with-preview">
+          <input type="url" class="input" id="cfg-img-serie" placeholder="https://...">
+          <img class="img-preview" id="preview-serie" src="" alt="preview">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Download</label>
+        <div class="input-with-preview">
+          <input type="url" class="input" id="cfg-img-download" placeholder="https://...">
+          <img class="img-preview" id="preview-download" src="" alt="preview">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Link</label>
+        <div class="input-with-preview">
+          <input type="url" class="input" id="cfg-img-link" placeholder="https://...">
+          <img class="img-preview" id="preview-link" src="" alt="preview">
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="form-actions">
+      <button type="button" class="btn btn-primary" id="btn-save">Sauvegarder</button>
+      <button type="button" class="btn btn-success" id="btn-save-scan">Sauvegarder & scanner</button>
+    </div>
+  </form>
+</div>

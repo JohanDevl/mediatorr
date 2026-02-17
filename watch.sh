@@ -64,6 +64,15 @@ watch_dir() {
   done
 }
 
+# -------- WEB SERVER --------
+ENABLE_WEB="${ENABLE_WEB:-true}"
+WEB_PORT="${WEB_PORT:-5765}"
+if [ "$ENABLE_WEB" = "true" ]; then
+  echo "🌐 Starting web interface on port $WEB_PORT"
+  WEB_PORT="$WEB_PORT" node /app/web/server.js &
+fi
+# -----------------------------
+
 # -------- SCAN INITIAL --------
 echo "🚀 Scan initial au démarrage"
 node /app/scene-maker.js
