@@ -4,7 +4,10 @@ const { spawn } = require('child_process');
 const emitter = require('./events');
 
 const DEST_DIR = '/data/torrent';
+const CACHE_DIR_TMDB = '/data/cache_tmdb';
+const CACHE_DIR_ITUNES = '/data/cache_itunes';
 const EXTENSIONS = ['.torrent', '.nfo', '.txt', '.prez.txt', '.srcinfo', '.source.nfo'];
+const METADATA_EXTENSIONS = ['.txt', '.prez.txt'];
 
 let activeProcess = null;
 
@@ -69,12 +72,39 @@ function triggerScan() {
   }
 }
 
+function deleteMetadataArtifacts(type, name) {
+  const itemDir = path.join(DEST_DIR, type, name);
+  let deleted = 0;
+
+  // Delete TMDb-dependent artifacts (.txt, .prez.txt)
+  for (const ext of METADATA_EXTENSIONS) {
+    const filePath = path.join(itemDir, `${name}${ext}`);
+    try { fs.unlinkSync(filePath); deleted++; } catch {}
+  }
+
+  // Delete cache file
+  const safeName = name.replace(/\s+/g, '.').toLowerCase();
+  if (type === 'films') {
+    const cacheFile = path.join(CACHE_DIR_TMDB, `movie_${safeName}.json`);
+    try { fs.unlinkSync(cacheFile); deleted++; } catch {}
+  } else if (type === 'series') {
+    const cacheFile = path.join(CACHE_DIR_TMDB, `tv_${safeName}.json`);
+    try { fs.unlinkSync(cacheFile); deleted++; } catch {}
+  } else if (type === 'musiques') {
+    const cacheFile = path.join(CACHE_DIR_ITUNES, `${safeName}.json`);
+    try { fs.unlinkSync(cacheFile); deleted++; } catch {}
+  }
+
+  return { deleted };
+}
+
 function isRunning() {
   return activeProcess !== null;
 }
 
 module.exports = {
   deleteArtifacts,
+  deleteMetadataArtifacts,
   triggerScan,
   isRunning,
 };

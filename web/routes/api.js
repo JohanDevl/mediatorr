@@ -5,6 +5,7 @@ const config = require('../lib/config');
 const media = require('../lib/media');
 const events = require('../lib/events');
 const regenerate = require('../lib/regenerate');
+const db = require('../../db');
 
 // GET /api/stats - Dashboard statistics
 router.get('/stats', (req, res) => {
@@ -126,6 +127,93 @@ router.delete('/media/:type/:name', (req, res) => {
   } catch (err) {
     console.error('Error deleting artifacts:', err);
     res.status(500).json({ error: 'Failed to delete artifacts' });
+  }
+});
+
+// PUT /api/media/:type/:name/override-id - Set TMDb/iTunes ID override
+router.put('/media/:type/:name/override-id', async (req, res) => {
+  try {
+    const { type, name } = req.params;
+    const { id } = req.body || {};
+
+    if (!['films', 'series'].includes(type)) {
+      return res.status(400).json({ error: 'Override only supported for films and series' });
+    }
+
+    if (!name || name.includes('..') || name.includes('/')) {
+      return res.status(400).json({ error: 'Invalid name' });
+    }
+
+    const tmdbId = parseInt(id, 10);
+    if (!tmdbId || tmdbId <= 0) {
+      return res.status(400).json({ error: 'Invalid TMDb ID' });
+    }
+
+    // Validate the TMDb ID exists
+    const apiType = type === 'films' ? 'movie' : 'tv';
+    const cfg = config.getConfig();
+    const apiKey = cfg.tmdbApiKey;
+
+    if (!apiKey) {
+      return res.status(400).json({ error: 'TMDb API key not configured' });
+    }
+
+    let tmdbData;
+    try {
+      const tmdbRes = await axios.get(
+        `https://api.themoviedb.org/3/${apiType}/${tmdbId}?api_key=${apiKey}&language=fr-FR`,
+        { timeout: 10000 }
+      );
+      tmdbData = tmdbRes.data;
+    } catch (err) {
+      if (err.response?.status === 404) {
+        return res.status(400).json({ error: `TMDb ID ${tmdbId} not found for type ${apiType}` });
+      }
+      return res.status(502).json({ error: 'Failed to validate TMDb ID' });
+    }
+
+    // Store override in DB
+    db.setOverride(type, name, tmdbId, apiType);
+
+    // Delete metadata artifacts (keep .torrent, .nfo, .srcinfo)
+    regenerate.deleteMetadataArtifacts(type, name);
+
+    // Trigger rescan
+    const scanResult = regenerate.triggerScan();
+
+    const title = tmdbData.title || tmdbData.name || '';
+    res.json({ status: 'Override set', tmdbId, title, scanTriggered: !scanResult.error });
+  } catch (err) {
+    console.error('Error setting override:', err);
+    res.status(500).json({ error: 'Failed to set override' });
+  }
+});
+
+// DELETE /api/media/:type/:name/override-id - Remove TMDb ID override
+router.delete('/media/:type/:name/override-id', (req, res) => {
+  try {
+    const { type, name } = req.params;
+
+    if (!['films', 'series'].includes(type)) {
+      return res.status(400).json({ error: 'Override only supported for films and series' });
+    }
+
+    if (!name || name.includes('..') || name.includes('/')) {
+      return res.status(400).json({ error: 'Invalid name' });
+    }
+
+    db.removeOverride(type, name);
+
+    // Delete metadata artifacts to force re-detection
+    regenerate.deleteMetadataArtifacts(type, name);
+
+    // Trigger rescan
+    const scanResult = regenerate.triggerScan();
+
+    res.json({ status: 'Override removed', scanTriggered: !scanResult.error });
+  } catch (err) {
+    console.error('Error removing override:', err);
+    res.status(500).json({ error: 'Failed to remove override' });
   }
 });
 

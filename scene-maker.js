@@ -8,6 +8,7 @@ const axios = require('axios');
 const qs = require('querystring');
 const fg = require('fast-glob');
 const stringSimilarity = require('string-similarity');
+const db = require('./db');
 
 // ---------------------- PERSISTENT CONFIG ----------------------
 const CONFIG_FILE = '/data/config.json';
@@ -1107,7 +1108,36 @@ async function getCachedMovie(
   const key = `${type}_${safeName(cacheName).toLowerCase()}`;
   const file = path.join(CACHE_DIR, key + '.json');
 
-  // ✅ cache présent → tentative de lecture
+  // 🔒 Vérifier override en base de données
+  const mediaType = type === 'movie' ? 'films' : (type === 'tv' ? 'series' : null);
+  const override = mediaType ? db.getOverride(mediaType, safeName(cacheName)) : null;
+
+  if (override) {
+    // Override actif → utiliser l'ID forcé
+    if (fs.existsSync(file)) {
+      try {
+        const cached = JSON.parse(fs.readFileSync(file, 'utf8'));
+        if (cached.id === override.api_id_override) return cached;
+        // Cache avec mauvais ID → supprimer et re-fetch
+        console.log(`🔄 Override TMDb (ID: ${override.api_id_override}), mise à jour du cache`);
+        fs.unlinkSync(file);
+      } catch {
+        console.log(`♻️ Cache TMDb corrompu, recréation : ${file}`);
+        fs.unlinkSync(file);
+      }
+    }
+
+    let details = await getTMDbDetails(override.api_id_override, language, type);
+    if (!details) {
+      details = await getTMDbDetails(override.api_id_override, 'en-US', type);
+    }
+    if (details) {
+      fs.writeFileSync(file, JSON.stringify(details, null, 2));
+    }
+    return details;
+  }
+
+  // ✅ Pas d'override → flow normal : cache présent → tentative de lecture
   if (fs.existsSync(file)) {
     try {
       return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -1115,7 +1145,7 @@ async function getCachedMovie(
       console.log(`♻️ Cache TMDb corrompu, recréation : ${file}`);
       fs.unlinkSync(file);
     }
-}
+  }
 
   // 🔎 search FR → EN
   let search = await searchTMDb(title, year, language, type);

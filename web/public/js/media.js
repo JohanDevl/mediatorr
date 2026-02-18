@@ -173,6 +173,11 @@ async function initDetailPage() {
     if (detail.sourceInfo) {
       renderSourceInfo(detail.sourceInfo);
     }
+
+    // Override panel (films/series only)
+    if (type === 'films' || type === 'series') {
+      initOverridePanel(type, name, detail);
+    }
   } catch (err) {
     console.error('Error loading detail:', err);
     showToast(err.message, 'error');
@@ -340,6 +345,93 @@ async function deleteItem(type, name) {
     }, 1500);
   } catch (err) {
     showToast(err.message, 'error');
+    btnEl.disabled = false;
+    btnEl.textContent = originalText;
+  }
+}
+
+// ============================================================================
+// OVERRIDE PANEL
+// ============================================================================
+
+function initOverridePanel(type, name, detail) {
+  const panel = document.getElementById('override-panel');
+  const input = document.getElementById('override-input');
+  const badge = document.getElementById('override-badge');
+  const btnSet = document.getElementById('btn-set-override');
+  const btnClear = document.getElementById('btn-clear-override');
+  const tmdbLink = document.getElementById('tmdb-link');
+
+  panel.style.display = '';
+
+  // Extract current TMDb ID from .txt content
+  const currentId = detail.txtContent ? extractTmdbId(detail.txtContent) : null;
+  const apiType = type === 'films' ? 'movie' : 'tv';
+
+  if (detail.override) {
+    input.value = detail.override.id;
+    badge.innerHTML = '<span class="badge badge-info">Override actif</span>';
+    btnClear.style.display = '';
+    tmdbLink.style.display = '';
+    tmdbLink.href = `https://www.themoviedb.org/${apiType}/${detail.override.id}`;
+  } else if (currentId) {
+    input.placeholder = `Actuel: ${currentId}`;
+    tmdbLink.style.display = '';
+    tmdbLink.href = `https://www.themoviedb.org/${apiType}/${currentId}`;
+  } else {
+    badge.innerHTML = '<span class="badge badge-error">TMDb non trouve</span>';
+  }
+
+  btnSet.addEventListener('click', () => setOverrideId(type, name, input.value));
+  btnClear.addEventListener('click', () => clearOverrideId(type, name));
+}
+
+function extractTmdbId(txtContent) {
+  const match = txtContent.match(/ID TMDB\s*:\s*(\d+)/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
+async function setOverrideId(type, name, idValue) {
+  const id = parseInt(idValue, 10);
+  if (!id || id <= 0) {
+    showToast('Entrez un ID TMDb valide', 'error');
+    return;
+  }
+
+  const btnEl = document.getElementById('btn-set-override');
+  const originalText = btnEl.textContent;
+  btnEl.disabled = true;
+  btnEl.innerHTML = '<span class="spinner" style="width: 14px; height: 14px;"></span>';
+
+  try {
+    const result = await api(`/media/${type}/${encodeURIComponent(name)}/override-id`, {
+      method: 'PUT',
+      body: { id }
+    });
+    const title = result.title ? ` (${result.title})` : '';
+    showToast(`Override defini: ${id}${title}`, 'success');
+    setTimeout(() => location.reload(), 1500);
+  } catch (err) {
+    showToast(err.message || 'Erreur', 'error');
+    btnEl.disabled = false;
+    btnEl.textContent = originalText;
+  }
+}
+
+async function clearOverrideId(type, name) {
+  if (!confirm('Retirer l\'override et revenir a la detection automatique ?')) return;
+
+  const btnEl = document.getElementById('btn-clear-override');
+  const originalText = btnEl.textContent;
+  btnEl.disabled = true;
+  btnEl.innerHTML = '<span class="spinner" style="width: 14px; height: 14px;"></span>';
+
+  try {
+    await api(`/media/${type}/${encodeURIComponent(name)}/override-id`, { method: 'DELETE' });
+    showToast('Override retire, re-detection en cours', 'success');
+    setTimeout(() => location.reload(), 1500);
+  } catch (err) {
+    showToast(err.message || 'Erreur', 'error');
     btnEl.disabled = false;
     btnEl.textContent = originalText;
   }

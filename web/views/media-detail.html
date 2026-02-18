@@ -30,6 +30,27 @@
     </div>
   </div>
 
+  <!-- TMDb ID Override Panel (films/series only) -->
+  <div class="card" id="override-panel" style="margin-bottom: var(--spacing-xl); display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg); flex-wrap: wrap; gap: var(--spacing-md);">
+      <h3 style="margin: 0;">ID TMDb</h3>
+      <div id="override-badge"></div>
+    </div>
+    <div id="override-content">
+      <div style="display: flex; gap: var(--spacing-md); align-items: center; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: var(--spacing-sm); flex: 1; min-width: 200px;">
+          <label for="override-input" style="font-size: 13px; color: var(--text-secondary); white-space: nowrap;">TMDb ID :</label>
+          <input type="number" id="override-input" min="1" placeholder="Ex: 603" style="flex: 1; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-primary); color: var(--text-primary); font-size: 13px;">
+        </div>
+        <div style="display: flex; gap: var(--spacing-sm);">
+          <button class="btn btn-primary btn-small" id="btn-set-override">Appliquer</button>
+          <button class="btn btn-secondary btn-small" id="btn-clear-override" style="display: none;">Retirer</button>
+          <a id="tmdb-link" href="#" target="_blank" rel="noopener" class="btn btn-secondary btn-small" style="display: none; text-decoration: none;">Voir sur TMDb</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- File Viewer with Tabs -->
   <div class="card" style="margin-bottom: var(--spacing-xl);">
     <h3 style="margin-top: 0; margin-bottom: var(--spacing-lg);">Fichiers</h3>

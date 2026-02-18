@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const db = require('../../db');
 
 const TORRENT_BASE = '/data/torrent';
 const CACHE_DIR_TMDB = '/data/cache_tmdb';
@@ -162,13 +163,19 @@ function getMediaDetail(type, name) {
     } catch {}
   }
 
+  // Check for TMDb ID override
+  const override = (type === 'films' || type === 'series')
+    ? db.getOverride(type, name)
+    : null;
+
   return {
     name,
     files,
     metadata,
     txtContent,
     sourceInfo,
-    hasAllArtifacts
+    hasAllArtifacts,
+    override: override ? { id: override.api_id_override, apiType: override.api_type } : null
   };
 }
 
