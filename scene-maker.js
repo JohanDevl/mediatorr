@@ -19,16 +19,7 @@ const ENABLE_FILMS = process.env.ENABLE_FILMS === 'true';
 const ENABLE_SERIES = process.env.ENABLE_SERIES === 'true';
 const ENABLE_MUSIQUES = process.env.ENABLE_MUSIQUES === 'true';
 const ENABLE_PREZ = process.env.ENABLE_PREZ !== 'false';
-
-const PREZ_IMG_BASE = 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images';
-const PREZ_IMAGES = {
-  info: process.env.PREZ_IMG_INFO || `${PREZ_IMG_BASE}/infos.png`,
-  synopsis: process.env.PREZ_IMG_SYNOPSIS || `${PREZ_IMG_BASE}/pitch.png`,
-  movie: process.env.PREZ_IMG_MOVIE || `${PREZ_IMG_BASE}/movie.png`,
-  serie: process.env.PREZ_IMG_SERIE || `${PREZ_IMG_BASE}/serie.png`,
-  download: process.env.PREZ_IMG_DOWNLOAD || `${PREZ_IMG_BASE}/download.png`,
-  link: process.env.PREZ_IMG_LINK || `${PREZ_IMG_BASE}/tmdb.png`
-};
+const FORCE_PREZ = process.env.FORCE_PREZ === 'true';
 
 function parseDirs(envVar, defaultDir) {
   const raw = process.env[envVar];
@@ -447,7 +438,7 @@ function parseSubtitleTracks(mediainfoRaw) {
 function parseNfoTechnical(mediainfoRaw, releaseName) {
   const info = {
     source: 'N/A', quality: 'N/A', format: 'N/A',
-    videoCodec: 'N/A', bitrate: 'N/A', audioCodec: 'N/A',
+    videoCodec: 'N/A', bitrate: 'N/A', bitDepth: 'N/A', audioCodec: 'N/A',
     languages: 'N/A', subtitles: 'N/A'
   };
 
@@ -499,6 +490,9 @@ function parseNfoTechnical(mediainfoRaw, releaseName) {
 
     const bitrateMatch = videoBlock.match(/Bit rate\s*:\s*([^\n]+)/);
     if (bitrateMatch) info.bitrate = bitrateMatch[1].trim();
+
+    const bitDepthMatch = videoBlock.match(/Bit depth\s*:\s*(\d+)\s*bits/);
+    if (bitDepthMatch) info.bitDepth = `${bitDepthMatch[1]} bits`;
   }
 
   if (info.audioCodec === 'N/A') {
@@ -564,8 +558,6 @@ function escapeBBCode(str) {
   return String(str).replace(/\[/g, '&#91;').replace(/\]/g, '&#93;');
 }
 
-const GITHUB_URL = 'https://github.com/JohanDevl/mediatorr';
-
 const LANG_TO_COUNTRY = {
   'Français': 'FR', 'Anglais': 'GB', 'Allemand': 'DE', 'Espagnol': 'ES',
   'Italien': 'IT', 'Japonais': 'JP', 'Coréen': 'KR', 'Portugais': 'PT',
@@ -599,20 +591,13 @@ function langFlag(langName, variant) {
   return cc ? countryToFlag(cc) : '🏳️';
 }
 
-const CODEC_NAMES = {
-  'E-AC-3': 'Dolby Digital Plus / E-AC3', 'AC-3': 'Dolby Digital / AC3',
-  'TrueHD': 'Dolby TrueHD', 'TrueHD Atmos': 'Dolby TrueHD Atmos',
-  'E-AC-3 Atmos': 'Dolby Digital Plus Atmos / E-AC3 Atmos',
-  'DTS-HD MA': 'DTS-HD Master Audio', 'DTS-HD': 'DTS-HD', 'DTS': 'DTS',
-  'DTS:X': 'DTS:X', 'AAC': 'AAC', 'FLAC': 'FLAC', 'Atmos': 'Dolby Atmos'
+const CODEC_SHORT = {
+  'E-AC-3': 'EAC3', 'AC-3': 'AC3', 'TrueHD': 'TrueHD',
+  'TrueHD Atmos': 'TrueHD Atmos', 'E-AC-3 Atmos': 'EAC3 Atmos',
+  'DTS-HD MA': 'DTS-HD MA', 'DTS-HD': 'DTS-HD', 'DTS': 'DTS',
+  'DTS:X': 'DTS:X', 'AAC': 'AAC', 'HE-AAC': 'HE-AAC',
+  'FLAC': 'FLAC', 'Atmos': 'Atmos'
 };
-
-function formatDateFR(dateStr) {
-  if (!dateStr) return 'N/A';
-  try {
-    return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-  } catch { return dateStr; }
-}
 
 function parseDetailedAudioTracks(mediainfoRaw) {
   if (!mediainfoRaw) return [];
@@ -645,14 +630,30 @@ function parseDetailedAudioTracks(mediainfoRaw) {
     const bitrate = bitrateMatch ? bitrateMatch[1].trim() : null;
 
     const flag = langFlag(langName, langType);
-    const codecName = codec ? (CODEC_NAMES[codec] || codec) : 'N/A';
-    const channelStr = channels ? ` [${channels}]` : '';
-    const bitrateStr = bitrate ? ` @ ${bitrate}` : '';
+    const codecName = codec ? (CODEC_SHORT[codec] || codec) : '';
     const typeStr = langType ? ` (${langType})` : '';
+    const channelStr = channels || '';
+    const codecStr = codecName ? ` (${codecName})` : '';
+    const bitrateStr = bitrate ? ` • ${bitrate}` : '';
 
-    tracks.push(`${flag} ${langName}${typeStr}${channelStr} ${codecName}${bitrateStr}`);
+    tracks.push(`${flag} ${langName}${typeStr} • ${channelStr}${codecStr}${bitrateStr}`);
   }
   return tracks;
+}
+
+function parseFirstAudioTrack(mediainfoRaw) {
+  if (!mediainfoRaw) return null;
+  const audioRegex = /^Audio(?: #\d+)?\s*\n([\s\S]*?)(?=^(?:Audio|Text|Menu|$)|\n\n\n)/gm;
+  const match = audioRegex.exec(mediainfoRaw);
+  if (!match) return null;
+  const block = match[1];
+  const formatMatch = block.match(/Format\s*:\s*([^\n]+)/);
+  const channelsMatch = block.match(/Channel\(s\)\s*:\s*(\d+)/);
+  let codec = formatMatch ? formatMatch[1].trim().split('\n')[0].trim() : null;
+  if (codec === 'MLP FBA' || codec === 'MLP FBA 16-ch') codec = 'TrueHD';
+  const codecName = codec ? (CODEC_SHORT[codec] || codec) : '';
+  const channels = channelsMatch ? (parseInt(channelsMatch[1]) > 2 ? `${channelsMatch[1] - 1}.1` : '2.0') : '';
+  return { codec: codecName, channels };
 }
 
 function formatDetailedSubtitles(mediainfoRaw) {
@@ -665,214 +666,94 @@ function formatDetailedSubtitles(mediainfoRaw) {
     const langMatch = block.match(/Language\s*:\s*(\w+)/);
     const titleMatch = block.match(/Title\s*:\s*([^\n]+)/);
     const forcedMatch = block.match(/Forced\s*:\s*(\w+)/);
+    const formatMatch = block.match(/Format\s*:\s*([^\n]+)/);
     if (!langMatch) continue;
     const langName = langCodeToName(langMatch[1]);
     const flag = langFlag(langName);
-    let type = '';
+
+    let qualifier = '';
     if (titleMatch) {
       const t = titleMatch[1].trim().toLowerCase();
-      if (t.includes('forced') || t.includes('forcé')) type = ' (Forcé)';
-      else if (t.includes('full') || t.includes('complet')) type = ' (Full)';
-      else if (t.includes('sdh') || t.includes('cc')) type = ' (SDH)';
+      if (t.includes('forced') || t.includes('forcé')) qualifier = ' forcés';
+      else if (t.includes('full') || t.includes('complet')) qualifier = ' complets';
+      else if (t.includes('sdh') || t.includes('cc')) qualifier = ' SDH';
     }
-    if (!type && forcedMatch && forcedMatch[1].toLowerCase() === 'yes') type = ' (Forcé)';
-    subs.push(`${flag} ${langName}${type}`);
+    if (!qualifier && forcedMatch && forcedMatch[1].toLowerCase() === 'yes') qualifier = ' forcés';
+
+    let format = '';
+    if (formatMatch) {
+      const f = formatMatch[1].trim().split('\n')[0].trim().toUpperCase();
+      if (f === 'UTF-8' || f === 'SUBRIP') format = ' (SRT)';
+      else if (f === 'ASS') format = ' (ASS)';
+      else if (f === 'SSA') format = ' (SSA)';
+      else if (f === 'PGS') format = ' (PGS)';
+      else if (f === 'VOBSUB') format = ' (VobSub)';
+      else format = ` (${f})`;
+    }
+
+    subs.push(`${flag} ${langName}${qualifier}${format}`);
   }
   return subs;
 }
 
-function buildVideoPrezHeader(title, year, posterPath, tagline) {
-  let bb = `[center][b][font=Verdana][color=#3d85c6][size=29]${title}[/size]\n\n`;
-  bb += `    [size=18](${year})[/size][/color][/font][/b]\n\n`;
-  if (posterPath) bb += `[img]https://image.tmdb.org/t/p/original${posterPath}[/img]\n\n`;
-  if (tagline) {
-    bb += `[color=#ea9999][i][b][font=Verdana][size=29]\n`;
-    bb += `"${escapeBBCode(tagline)}"[/size][/font][/b][/i][/color]\n\n`;
-  }
-  return bb;
-}
-
-function buildInfoSection(fields) {
-  let bb = `[img]${PREZ_IMAGES.info}[/img]\n\n\n`;
-  bb += `[font=Verdana][size=13]`;
-  for (const { label, value } of fields) {
-    if (value && value !== 'N/A') bb += `[b][color=#3d85c6]${label} :[/color][/b] [i]${value}[/i]\n`;
-  }
-  return bb;
-}
-
-function buildCastSection(credits, tmdbType) {
+function generateSimplePrez(nfoContent, mediaType, releaseName) {
+  const tech = parseNfoTechnical(nfoContent, releaseName);
   let bb = '';
-  const cast = credits?.cast?.slice(0, 5) || [];
-  if (cast.length) {
-    bb += `[b][color=#3d85c6]Acteurs :[/color][/b] [i]${cast.map(a => escapeBBCode(a.name)).join(', ')}[/i]\n`;
-    const photos = cast.filter(a => a.profile_path).map(a => `[img]https://image.tmdb.org/t/p/w185${a.profile_path}[/img]`);
-    if (photos.length) bb += photos.join(' ') + '\n';
+
+  if (mediaType !== 'musique') {
+    // Badges vidéo
+    const badges = [];
+    if (tech.videoCodec !== 'N/A') {
+      let codecLabel = tech.videoCodec;
+      if (codecLabel === 'H.265') codecLabel = 'x265';
+      else if (codecLabel === 'H.264') codecLabel = 'x264';
+      badges.push(`[badge=red][size=15]${codecLabel}[/size][/badge]`);
+    }
+    if (tech.bitDepth !== 'N/A') {
+      badges.push(`[badge=gray][size=15]${tech.bitDepth}[/size][/badge]`);
+    }
+    if (tech.quality !== 'N/A') {
+      let qualityLabel = tech.quality;
+      if (qualityLabel.includes('1080')) qualityLabel = `HD ${qualityLabel}`;
+      else if (qualityLabel.includes('2160') || qualityLabel.includes('4K')) qualityLabel = `UHD ${qualityLabel}`;
+      badges.push(`[badge=blue][size=15]${qualityLabel}[/size][/badge]`);
+    }
+    const firstAudio = parseFirstAudioTrack(nfoContent);
+    if (firstAudio && firstAudio.codec) {
+      const audioLabel = [firstAudio.codec, firstAudio.channels].filter(Boolean).join(' ');
+      badges.push(`[badge=purple][size=15]${audioLabel}[/size][/badge]`);
+    }
+    bb += badges.join('');
+  } else {
+    // Musique : badge codec audio
+    if (tech.audioCodec !== 'N/A') {
+      bb += `[badge=purple][size=15]${tech.audioCodec}[/size][/badge]`;
+    }
   }
-  return bb;
-}
+  bb += '\n\n';
 
-function buildRatingSection(voteAverage, voteCount, tmdbId, tmdbType) {
-  let bb = '';
-  if (voteAverage) {
-    const score = Math.round(voteAverage * 10);
-    bb += `[img]https://img.streetprez.com/note/${score}.svg[/img] [i]${voteAverage.toFixed(2)} (${voteCount || 0})[/i]\n\n`;
-  }
-  const typeSlug = tmdbType === 'tv' ? 'tv' : 'movie';
-  bb += ` [url=https://www.themoviedb.org/${typeSlug}/${tmdbId}][img]${PREZ_IMAGES.link}[/img][/url]\n\n`;
-  return bb;
-}
-
-function buildSynopsisSection(overview) {
-  let bb = `[img]${PREZ_IMAGES.synopsis}[/img]\n\n`;
-  bb += `${overview || 'N/A'}\n\n\n`;
-  return bb;
-}
-
-function buildTechnicalSection(tech, nfoContent, mediaType) {
-  const techImg = mediaType === 'film' ? PREZ_IMAGES.movie : PREZ_IMAGES.serie;
-  let bb = `[img]${techImg}[/img]\n`;
-  bb += `[b][color=#3d85c6]Release source :[/color][/b] [i]${tech.source}[/i]\n`;
-  bb += `[b][color=#3d85c6]Qualité vidéo :[/color][/b] [i]${tech.quality}[/i]\n`;
-  bb += `[b][color=#3d85c6]Format vidéo :[/color][/b] [i]${tech.format}[/i]\n`;
-  bb += `[b][color=#3d85c6]Codec vidéo :[/color][/b] [i]${tech.videoCodec}[/i]\n`;
-  bb += `[b][color=#3d85c6]Débit vidéo :[/color][/b] [i]${tech.bitrate}[/i]\n\n`;
-
+  // Grille langues / sous-titres
   const audioTracks = parseDetailedAudioTracks(nfoContent);
-  bb += `[b][color=#3d85c6] Audio :[/color][/b]\n`;
-  if (audioTracks.length) {
-    bb += audioTracks.map(t => ` ${t}`).join('\n') + '\n';
-  } else {
-    bb += `${tech.audioCodec} - ${tech.languages}\n`;
-  }
-
   const subtitles = formatDetailedSubtitles(nfoContent);
-  bb += `[b][color=#3d85c6]Sous-titres :[/color][/b]\n`;
-  if (subtitles.length) {
-    bb += subtitles.join('\n') + '\n';
-  } else {
-    bb += `Aucun\n`;
+
+  if (audioTracks.length || subtitles.length) {
+    bb += '[grid]\n';
+    if (audioTracks.length) {
+      bb += '[col]\n[card]\n';
+      bb += '[card-title][size=25][b]🔊 Langues[/b][/size][/card-title]\n';
+      bb += '[card-body]\n\n[list]\n';
+      bb += audioTracks.map(t => `[*]${t}`).join('\n') + '\n';
+      bb += '[/list]\n\n[/card-body]\n[/card]\n[/col]\n';
+    }
+    if (subtitles.length) {
+      bb += '\n[col]\n[card]\n';
+      bb += '[card-title][size=25][b]📝 Sous-titres[/b][/size][/card-title]\n';
+      bb += '[card-body]\n\n[list]\n';
+      bb += subtitles.map(s => `[*]${s}`).join('\n') + '\n';
+      bb += '[/list]\n\n[/card-body]\n[/card]\n[/col]\n';
+    }
+    bb += '[/grid]\n';
   }
-  bb += '\n';
-  return bb;
-}
-
-function buildSizeSection(fileSize, fileCount) {
-  let bb = `[img]${PREZ_IMAGES.download}[/img]\n`;
-  bb += `[b][color=#3d85c6]Taille totale :[/color][/b] ${fileSize}\n`;
-  bb += `[b][color=#3d85c6]Nombre de fichier :[/color][/b] ${fileCount}[/size][/font][/center]\n\n`;
-  return bb;
-}
-
-function buildFooter() {
-  return `[right][sub]Propulsé par [url=${GITHUB_URL}][i]Mediatorr[/i][/url][/sub][/right]\n`;
-}
-
-function generateFilmPrez(name, nfoContent, tmdbData, fileSize, fileCount) {
-  const tech = parseNfoTechnical(nfoContent, name);
-  const title = escapeBBCode(tmdbData.title) || 'N/A';
-  const year = tmdbData.release_date?.split('-')[0] || 'N/A';
-  const tagline = tmdbData.tagline || '';
-
-  let bb = buildVideoPrezHeader(title, year, tmdbData.poster_path, tagline);
-
-  const director = tmdbData.credits?.crew?.find(c => c.job === 'Director');
-  bb += buildInfoSection([
-    { label: 'Pays', value: escapeBBCode(tmdbData.production_countries?.map(c => c.name).join(', ')) },
-    { label: 'Genres', value: tmdbData.genres?.map(g => `[i][url=/torrents?tags=${encodeURIComponent(g.name)}]${escapeBBCode(g.name)}[/url][/i]`).join(', ') },
-    { label: 'Date de sortie', value: formatDateFR(tmdbData.release_date) },
-    { label: 'Titre original', value: escapeBBCode(tmdbData.original_title) },
-    { label: 'Durée', value: tmdbData.runtime ? `${tmdbData.runtime} min` : null },
-    { label: 'Réalisateur', value: director ? escapeBBCode(director.name) : null },
-  ]);
-
-  bb += buildCastSection(tmdbData.credits, 'movie');
-  bb += buildRatingSection(tmdbData.vote_average, tmdbData.vote_count, tmdbData.id, 'movie');
-  bb += buildSynopsisSection(escapeBBCode(tmdbData.overview));
-  bb += buildTechnicalSection(tech, nfoContent, 'film');
-  bb += buildSizeSection(fileSize, fileCount);
-  bb += buildFooter();
-
-  return bb;
-}
-
-function generateSeriePrez(name, nfoContent, tmdbData, fileSize, fileCount, seasonData, episodeData) {
-  const tech = parseNfoTechnical(nfoContent, name);
-  const title = escapeBBCode(tmdbData.name) || 'N/A';
-  const epMatch = name.match(/[.\s-]S(\d{1,2})E(\d{1,3})(?:[.\s-]|$)/i);
-  const seasonMatch = name.match(/[.\s-]S(\d{1,2})(?:[.\s-]|$)/i);
-  const isComplete = /integrale|complet[e]?|complete|int[eé]grale/i.test(name);
-
-  let subtitle = '';
-  if (isComplete) {
-    subtitle = ' - Intégrale';
-  } else if (epMatch) {
-    const epName = episodeData?.name ? ` - ${escapeBBCode(episodeData.name)}` : '';
-    subtitle = ` - S${epMatch[1].padStart(2, '0')}E${epMatch[2].padStart(2, '0')}${epName}`;
-  } else if (seasonMatch) {
-    subtitle = ` - Saison ${parseInt(seasonMatch[1])}`;
-  }
-
-  const year = tmdbData.first_air_date?.split('-')[0] || 'N/A';
-  const tagline = tmdbData.tagline || '';
-  const posterPath = isComplete ? tmdbData.poster_path
-    : (episodeData?.still_path ? episodeData.still_path : null)
-      || seasonData?.poster_path
-      || tmdbData.poster_path;
-
-  let bb = buildVideoPrezHeader(`${title}${subtitle}`, year, posterPath, tagline);
-
-  const creators = tmdbData.created_by?.map(c => escapeBBCode(c.name)).join(', ') || null;
-  bb += buildInfoSection([
-    { label: 'Pays', value: escapeBBCode(tmdbData.origin_country?.join(', ')) },
-    { label: 'Genres', value: tmdbData.genres?.map(g => `[i][url=/torrents?tags=${encodeURIComponent(g.name)}]${escapeBBCode(g.name)}[/url][/i]`).join(', ') },
-    { label: 'Date de sortie', value: formatDateFR(tmdbData.first_air_date) },
-    { label: 'Titre original', value: escapeBBCode(tmdbData.original_name) },
-    { label: 'Durée', value: tmdbData.episode_run_time?.length ? `${tmdbData.episode_run_time[0]} min` : null },
-    { label: 'Créateur(s)', value: creators },
-  ]);
-
-  bb += buildCastSection(tmdbData.credits, 'tv');
-  bb += buildRatingSection(tmdbData.vote_average, tmdbData.vote_count, tmdbData.id, 'tv');
-  bb += buildSynopsisSection(escapeBBCode(tmdbData.overview));
-  bb += buildTechnicalSection(tech, nfoContent, 'serie');
-  bb += buildSizeSection(fileSize, fileCount);
-  bb += buildFooter();
-
-  return bb;
-}
-
-function generateMusiquePrez(name, nfoContent, itunesData, fileSize, fileCount) {
-  const tech = parseNfoTechnical(nfoContent, name);
-  const artistName = escapeBBCode(itunesData.artistName) || 'N/A';
-  const collectionName = escapeBBCode(itunesData.collectionName) || 'N/A';
-  const artworkUrl = itunesData.artworkUrl100?.replace('/100x100bb.jpg', '/600x600bb.jpg') || '';
-  const releaseDate = formatDateFR(itunesData.releaseDate);
-  const genre = itunesData.primaryGenreName || 'N/A';
-  const trackCount = itunesData.trackCount || 'N/A';
-  const collectionViewUrl = itunesData.collectionViewUrl || '';
-
-  let bb = `[center][b][font=Verdana][color=#3d85c6][size=29]${artistName}[/size]\n\n`;
-  bb += `    [size=18]${collectionName}[/size][/color][/font][/b]\n\n`;
-  if (artworkUrl) bb += `[img]${artworkUrl}[/img]\n\n`;
-
-  bb += `[img]${PREZ_IMAGES.info}[/img]\n\n\n`;
-  bb += `[font=Verdana][size=13]`;
-  bb += `[b][color=#3d85c6]Artiste :[/color][/b] [i]${artistName}[/i]\n`;
-  bb += `[b][color=#3d85c6]Album :[/color][/b] [i]${collectionName}[/i]\n`;
-  bb += `[b][color=#3d85c6]Date de sortie :[/color][/b] [i]${releaseDate}[/i]\n`;
-  bb += `[b][color=#3d85c6]Genre :[/color][/b] [i]${genre}[/i]\n`;
-  bb += `[b][color=#3d85c6]Nombre de pistes :[/color][/b] [i]${trackCount}[/i]\n`;
-  if (collectionViewUrl) bb += `\n [url=${collectionViewUrl}][img]${PREZ_IMAGES.link}[/img][/url]\n`;
-  bb += `\n`;
-
-  bb += `[img]${PREZ_IMAGES.serie}[/img]\n`;
-  bb += `[b][color=#3d85c6]Codec Audio :[/color][/b] [i]${tech.audioCodec}[/i]\n\n`;
-
-  bb += `[img]${PREZ_IMAGES.download}[/img]\n`;
-  bb += `[b][color=#3d85c6]Taille totale :[/color][/b] ${fileSize}\n`;
-  bb += `[b][color=#3d85c6]Nombre de fichier :[/color][/b] ${fileCount}[/size][/font][/center]\n\n`;
-  bb += buildFooter();
 
   return bb;
 }
@@ -898,53 +779,13 @@ function getSourceSize(sourcePath) {
   } catch { return 0; }
 }
 
-async function generatePrez(type, name, outDir, nfoPath, apiData, sourcePath, torrentSize) {
+function generatePrez(type, name, outDir, nfoPath) {
   if (!ENABLE_PREZ) return;
   const prezPath = path.join(outDir, `${name}.prez.txt`);
-  if (fs.existsSync(prezPath)) return;
+  if (fs.existsSync(prezPath) && !FORCE_PREZ) return;
 
   const nfoContent = extractMediaInfoFromNfo(nfoPath);
-  const totalSize = torrentSize || getSourceSize(sourcePath);
-  const fileSize = totalSize > 0 ? formatSize(totalSize) : 'N/A';
-  let fileCount = 1;
-  try {
-    const stat = fs.statSync(sourcePath);
-    if (stat.isDirectory()) {
-      const allFiles = await fg(['**/*'], { cwd: sourcePath, onlyFiles: true });
-      fileCount = allFiles.length;
-    }
-  } catch {}
-  let bbcode = null;
-
-  switch (type) {
-    case 'film':
-      bbcode = generateFilmPrez(name, nfoContent, apiData, fileSize, fileCount);
-      break;
-    case 'serie': {
-      let seasonData = null;
-      let episodeData = null;
-      const epMatch = name.match(/[.\s-]S(\d{1,2})E(\d{1,3})(?:[.\s-]|$)/i);
-      const seasonMatch = name.match(/[.\s-]S(\d{1,2})(?:[.\s-]|$)/i);
-      const isComplete = /integrale|complet[e]?|complete|int[eé]grale/i.test(name);
-      if (!isComplete && apiData?.id) {
-        if (epMatch) {
-          const sNum = parseInt(epMatch[1]);
-          const eNum = parseInt(epMatch[2]);
-          [seasonData, episodeData] = await Promise.all([
-            getTMDbSeasonDetails(apiData.id, sNum),
-            getTMDbEpisodeDetails(apiData.id, sNum, eNum)
-          ]);
-        } else if (seasonMatch) {
-          seasonData = await getTMDbSeasonDetails(apiData.id, parseInt(seasonMatch[1]));
-        }
-      }
-      bbcode = generateSeriePrez(name, nfoContent, apiData, fileSize, fileCount, seasonData, episodeData);
-      break;
-    }
-    case 'musique':
-      bbcode = generateMusiquePrez(name, nfoContent, apiData, fileSize, fileCount);
-      break;
-  }
+  const bbcode = generateSimplePrez(nfoContent, type, name);
 
   if (bbcode) {
     fs.writeFileSync(prezPath, bbcode);
@@ -1203,7 +1044,7 @@ async function processFile(file, destBase, index, total, label, tmdbType = 'movi
     fs.existsSync(txt) &&
     hasCache &&
     (!sourceNfoFile || fs.existsSync(sourceNfoDest)) &&
-    (!ENABLE_PREZ || fs.existsSync(prez))
+    (!ENABLE_PREZ || (fs.existsSync(prez) && !FORCE_PREZ))
   ) {
     if (!fs.existsSync(srcInfo)) {
       saveSourceInfo(srcInfo, [file], 'file');
@@ -1274,11 +1115,8 @@ Generated by Mediatorr
   }
 
   // 📜 Prez BBCode
-  if (ENABLE_PREZ && !fs.existsSync(prez)) {
-    let tmdbResult = null;
-    const cacheFile = path.join(CACHE_DIR, `${tmdbType}_${safeName(name).toLowerCase()}.json`);
-    try { tmdbResult = JSON.parse(fs.readFileSync(cacheFile, 'utf8')); } catch {}
-    if (tmdbResult) await generatePrez(tmdbType === 'tv' ? 'serie' : 'film', name, outDir, nfo, tmdbResult, file, torrentSize);
+  if (ENABLE_PREZ && (!fs.existsSync(prez) || FORCE_PREZ)) {
+    generatePrez(tmdbType === 'tv' ? 'serie' : 'film', name, outDir, nfo);
   }
 
   saveSourceInfo(srcInfo, [file], 'file');
@@ -1309,7 +1147,7 @@ async function processFilmFolder(folder, destBase, index, total, sourceDirs = []
     fs.existsSync(txt) &&
     hasCache &&
     (!sourceNfoFile || fs.existsSync(sourceNfoDest)) &&
-    (!ENABLE_PREZ || fs.existsSync(prez))
+    (!ENABLE_PREZ || (fs.existsSync(prez) && !FORCE_PREZ))
   ) {
     if (!fs.existsSync(srcInfo)) {
       saveSourceInfo(srcInfo, absVideos, 'folder');
@@ -1379,11 +1217,8 @@ Generated by Mediatorr
   }
 
   // 📜 Prez BBCode
-  if (ENABLE_PREZ && !fs.existsSync(prez)) {
-    let tmdbResult = null;
-    const cacheFile = path.join(CACHE_DIR, `movie_${safeName(name).toLowerCase()}.json`);
-    try { tmdbResult = JSON.parse(fs.readFileSync(cacheFile, 'utf8')); } catch {}
-    if (tmdbResult) await generatePrez('film', name, outDir, nfo, tmdbResult, folder, torrentSize);
+  if (ENABLE_PREZ && (!fs.existsSync(prez) || FORCE_PREZ)) {
+    generatePrez('film', name, outDir, nfo);
   }
 
   saveSourceInfo(srcInfo, absVideos, 'folder');
@@ -1434,11 +1269,8 @@ Generated by Mediatorr
 
   // 📜 Prez BBCode
   const prezSerie = path.join(outDir, `${name}.prez.txt`);
-  if (ENABLE_PREZ && !fs.existsSync(prezSerie)) {
-    let tmdbResult = null;
-    const cacheFile = path.join(CACHE_DIR, `${tmdbType}_${safeName(name).toLowerCase()}.json`);
-    try { tmdbResult = JSON.parse(fs.readFileSync(cacheFile, 'utf8')); } catch {}
-    if (tmdbResult) await generatePrez('serie', name, outDir, nfo, tmdbResult, folder, torrentSize);
+  if (ENABLE_PREZ && (!fs.existsSync(prezSerie) || FORCE_PREZ)) {
+    generatePrez('serie', name, outDir, nfo);
   }
 }
 
@@ -1471,7 +1303,7 @@ async function processSeriesFolder(folder, destBase, index, total) {
     fs.existsSync(txt) &&
     hasCache &&
     (!sourceNfoFile || fs.existsSync(sourceNfoDest)) &&
-    (!ENABLE_PREZ || fs.existsSync(prezSeries))
+    (!ENABLE_PREZ || (fs.existsSync(prezSeries) && !FORCE_PREZ))
   ) {
     if (!fs.existsSync(srcInfo)) {
       saveSourceInfo(srcInfo, absVideos);
@@ -1610,7 +1442,7 @@ async function processMusicEntry(entryPath, destBase, index, total) {
     fs.existsSync(nfo) &&
     fs.existsSync(txt) &&
     hasITunesCache(g.artist, g.title) &&
-    (!ENABLE_PREZ || fs.existsSync(prezMusic))
+    (!ENABLE_PREZ || (fs.existsSync(prezMusic) && !FORCE_PREZ))
   ) {
     if (!fs.existsSync(srcInfo)) {
       saveSourceInfo(srcInfo, allAudio);
@@ -1678,12 +1510,8 @@ Generated by Mediatorr
   }
 
   // 📜 Prez BBCode
-  if (ENABLE_PREZ && !fs.existsSync(prezMusic)) {
-    let itunesResult = null;
-    const cacheKey = safeName(`${g.artist}_${g.title}`).toLowerCase();
-    const cacheFile = path.join(CACHE_DIR_ITUNES, cacheKey + '.json');
-    try { itunesResult = JSON.parse(fs.readFileSync(cacheFile, 'utf8')); } catch {}
-    if (itunesResult) await generatePrez('musique', name, outDir, nfo, itunesResult, entryPath, torrentSize);
+  if (ENABLE_PREZ && (!fs.existsSync(prezMusic) || FORCE_PREZ)) {
+    generatePrez('musique', name, outDir, nfo);
   }
 
   saveSourceInfo(srcInfo, allAudio);
