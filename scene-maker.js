@@ -378,10 +378,21 @@ function parseAudioTracks(mediainfoRaw) {
     if (titleMatch) {
       const title = titleMatch[1].trim();
       // Try structured format: "FR VFF : AC3 5.1", "ENG VO : AC3 5.1"
-      const typeMatch = title.match(/^(\w{2,3})\s*(VFF|VFQ|VFI|VF2|VO|VOF|VOST|VFB)?(?:\s|:)/i);
+      const typeMatch = title.match(/^(\w{2,3})\s*(VFF|VFQ|VFI|VF2|VOF|VOST|VFB|VF|VO)?(?:\s|:)/i);
       if (typeMatch) {
-        langName = langCodeToName(typeMatch[1]);
-        if (typeMatch[2]) langType = typeMatch[2].toUpperCase();
+        const resolvedLang = langCodeToName(typeMatch[1]);
+        if (LANG_TO_COUNTRY[resolvedLang]) {
+          langName = resolvedLang;
+          if (typeMatch[2]) langType = typeMatch[2].toUpperCase();
+        } else {
+          const asVariant = typeMatch[1].toUpperCase();
+          if (['VF', 'VFF', 'VFQ', 'VFI', 'VF2', 'VOF', 'VFB'].includes(asVariant)) {
+            langName = 'Français';
+            langType = asVariant;
+          } else if (['VO', 'VOST'].includes(asVariant)) {
+            langType = asVariant;
+          }
+        }
       } else {
         // Try full language name: "French DTS", "English 5.1", "Français (VFF)"
         const firstWord = title.match(/^([\w\u00C0-\u024F]+)/);
@@ -389,7 +400,7 @@ function parseAudioTracks(mediainfoRaw) {
           const resolved = langCodeToName(firstWord[1]);
           if (resolved && LANG_TO_COUNTRY[resolved]) {
             langName = resolved;
-            const variantMatch = title.match(/\b(VFF|VFQ|VFI|VF2|VO|VOF|VOST|VFB)\b/i);
+            const variantMatch = title.match(/\b(VFF|VFQ|VFI|VF2|VOF|VOST|VFB|VF|VO)\b/i);
             if (variantMatch) langType = variantMatch[1].toUpperCase();
           }
         }
@@ -605,7 +616,7 @@ function langFlag(langName, variant) {
 }
 
 const CODEC_SHORT = {
-  'E-AC-3': 'EAC3', 'AC-3': 'AC3', 'TrueHD': 'TrueHD',
+  'E-AC-3': 'EAC3', 'E-AC-3 JOC': 'EAC3 Atmos', 'AC-3': 'AC3', 'TrueHD': 'TrueHD',
   'TrueHD Atmos': 'TrueHD Atmos', 'E-AC-3 Atmos': 'EAC3 Atmos',
   'DTS-HD MA': 'DTS-HD MA', 'DTS-HD': 'DTS-HD', 'DTS': 'DTS',
   'DTS:X': 'DTS:X', 'AAC': 'AAC', 'HE-AAC': 'HE-AAC',
@@ -632,10 +643,24 @@ function parseAudioTracksRaw(mediainfoRaw) {
     if (titleMatch) {
       const t = titleMatch[1].trim();
       // Try structured format: "FR VFF : AC3 5.1", "ENG VO : AC3 5.1"
-      const tm = t.match(/^(\w{2,3})\s*(VFF|VFQ|VFI|VF2|VO|VOF|VOST|VFB)?(?:\s|:)/i);
+      const tm = t.match(/^(\w{2,3})\s*(VFF|VFQ|VFI|VF2|VOF|VOST|VFB|VF|VO)?(?:\s|:)/i);
       if (tm) {
-        langName = langCodeToName(tm[1]);
-        if (tm[2]) langType = tm[2].toUpperCase();
+        const resolvedLang = langCodeToName(tm[1]);
+        if (LANG_TO_COUNTRY[resolvedLang]) {
+          // First word is a valid language code (FR, ENG, etc.)
+          langName = resolvedLang;
+          if (tm[2]) langType = tm[2].toUpperCase();
+        } else {
+          // First word may be a variant itself (VF, VO, VFF, etc.)
+          const asVariant = tm[1].toUpperCase();
+          if (['VF', 'VFF', 'VFQ', 'VFI', 'VF2', 'VOF', 'VFB'].includes(asVariant)) {
+            langName = langName || 'Français';
+            langType = asVariant;
+          } else if (['VO', 'VOST'].includes(asVariant)) {
+            // Original version — keep langName from Language field
+            langType = asVariant;
+          }
+        }
       } else {
         // Try full language name: "French DTS", "English 5.1", "Français (VFF)"
         const firstWord = t.match(/^([\w\u00C0-\u024F]+)/);
@@ -643,7 +668,7 @@ function parseAudioTracksRaw(mediainfoRaw) {
           const resolved = langCodeToName(firstWord[1]);
           if (resolved && LANG_TO_COUNTRY[resolved]) {
             langName = resolved;
-            const variantMatch = t.match(/\b(VFF|VFQ|VFI|VF2|VO|VOF|VOST|VFB)\b/i);
+            const variantMatch = t.match(/\b(VFF|VFQ|VFI|VF2|VOF|VOST|VFB|VF|VO)\b/i);
             if (variantMatch) langType = variantMatch[1].toUpperCase();
           }
         }
