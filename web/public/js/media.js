@@ -226,89 +226,21 @@ function renderMetadata(metadata, type) {
   const el = document.getElementById('metadata-content');
 
   if (!metadata || typeof metadata !== 'object') {
-    el.innerHTML = '<div class="empty-state"><div class="empty-state-title">Pas de metadata disponible</div></div>';
+    el.innerHTML = '<span class="badge badge-error">Pas de metadata</span>';
     return;
   }
 
-  let html = '<div style="display: flex; gap: var(--spacing-xl); flex-wrap: wrap; align-items: flex-start;">';
+  const title = metadata.title || metadata.name || metadata.collectionName || metadata.trackName || '';
+  const dateStr = metadata.release_date || metadata.first_air_date;
+  const year = dateStr ? dateStr.substring(0, 4) : '';
 
-  // Poster: TMDb uses poster_path, iTunes uses artworkUrl100
-  const posterPath = metadata.poster_path || metadata.poster;
-  if (posterPath) {
-    const posterUrl = posterPath.startsWith('/') ? `/api/images/tmdb/w300${posterPath}` : posterPath;
-    html += `<div style="flex-shrink: 0; min-width: 120px;">
-      <img src="${escapeHtml(posterUrl)}" alt="Poster" style="width: 120px; height: auto; border-radius: var(--radius-lg);" onerror="this.style.display='none'" />
-    </div>`;
-  } else if (metadata.artworkUrl100) {
-    const artworkUrl = metadata.artworkUrl100.replace('100x100', '300x300');
-    html += `<div style="flex-shrink: 0; min-width: 120px;">
-      <img src="${escapeHtml(artworkUrl)}" alt="Cover" style="width: 120px; height: auto; border-radius: var(--radius-lg);" onerror="this.style.display='none'" />
-    </div>`;
-  }
-
-  html += '<div style="flex: 1; min-width: 250px;">';
-
-  // Title: TMDb uses title (movies) or name (TV), iTunes uses trackName/collectionName
-  const title = metadata.title || metadata.name || metadata.collectionName || metadata.trackName;
+  let html = '<div style="font-size: 14px; color: var(--text-secondary);">';
   if (title) {
-    html += `<div style="font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: var(--spacing-sm);">${escapeHtml(title)}</div>`;
+    html += `<strong style="color: var(--text-primary);">${escapeHtml(title)}</strong>`;
+    if (year) html += ` (${escapeHtml(year)})`;
   }
-
-  // Year: TMDb uses release_date (movies) or first_air_date (TV)
-  const dateStr = metadata.release_date || metadata.first_air_date || metadata.year;
-  const year = dateStr ? (typeof dateStr === 'string' ? dateStr.substring(0, 4) : dateStr) : null;
-  const rating = metadata.vote_average || metadata.rating;
-
-  if (year) {
-    html += `<div style="font-size: 14px; color: var(--text-secondary); margin-bottom: var(--spacing-md);">${escapeHtml(String(year))}`;
-    if (rating) {
-      html += ` &bull; &#11088; ${Number(rating).toFixed(1)}/10`;
-    }
-    html += `</div>`;
-  }
-
-  // Genres: TMDb returns [{id, name}], handle both object and string arrays
-  if (metadata.genres && metadata.genres.length > 0) {
-    html += `<div style="margin-bottom: var(--spacing-md);">
-      ${metadata.genres.map(g => `<span class="badge badge-info">${escapeHtml(typeof g === 'object' ? g.name : g)}</span>`).join('')}
-    </div>`;
-  }
-
-  if (metadata.overview) {
-    html += `<div style="font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-top: var(--spacing-md);">${escapeHtml(metadata.overview).replace(/\n/g, '<br>')}</div>`;
-  }
-
-  if (type === 'musiques') {
-    const artist = metadata.artistName || metadata.artist;
-    const album = metadata.collectionName || metadata.album;
-    if (artist) {
-      html += `<div style="margin-top: var(--spacing-lg); font-size: 13px;"><strong>Artiste:</strong> ${escapeHtml(artist)}</div>`;
-    }
-    if (album) {
-      html += `<div style="font-size: 13px;"><strong>Album:</strong> ${escapeHtml(album)}</div>`;
-    }
-  } else {
-    // Director: TMDb stores in credits.crew
-    const director = metadata.director ||
-      (metadata.credits && metadata.credits.crew
-        ? (metadata.credits.crew.find(c => c.job === 'Director') || {}).name
-        : null);
-    if (director) {
-      html += `<div style="margin-top: var(--spacing-lg); font-size: 13px;"><strong>Realisateur:</strong> ${escapeHtml(director)}</div>`;
-    }
-
-    // Cast: TMDb stores in credits.cast as [{name, ...}]
-    const castList = metadata.cast ||
-      (metadata.credits && metadata.credits.cast
-        ? metadata.credits.cast.slice(0, 5).map(c => c.name)
-        : null);
-    if (castList && castList.length > 0) {
-      const names = castList.slice(0, 5).map(c => typeof c === 'object' ? c.name : c);
-      html += `<div style="font-size: 13px;"><strong>Acteurs:</strong> ${escapeHtml(names.join(', '))}${castList.length > 5 ? '...' : ''}</div>`;
-    }
-  }
-
-  html += '</div></div>';
+  html += ' <span class="badge badge-success">Cache OK</span>';
+  html += '</div>';
   el.innerHTML = html;
 }
 
@@ -318,7 +250,7 @@ function renderFileTabs(files, type, name) {
 
   const viewableFiles = files.filter(f => {
     const fname = f.name || f;
-    return fname.endsWith('.nfo') || fname.endsWith('.txt') || fname.endsWith('.prez') || fname.includes('.prez');
+    return fname.endsWith('.nfo') || fname.endsWith('.txt') || fname.endsWith('.prez') || fname.includes('.prez') || fname.endsWith('.srcinfo');
   });
 
   if (viewableFiles.length === 0) {
@@ -328,7 +260,13 @@ function renderFileTabs(files, type, name) {
 
   const tabs = viewableFiles.map((f, i) => {
     const fname = f.name || f;
-    const displayName = fname.includes('.prez') ? 'Prez' : fname.split('.').pop().toUpperCase();
+    let displayName;
+    if (fname.includes('.prez')) displayName = 'Prez';
+    else if (fname.endsWith('.source.nfo')) displayName = 'Source NFO';
+    else if (fname.endsWith('.srcinfo')) displayName = 'SrcInfo';
+    else if (fname.endsWith('.nfo')) displayName = 'NFO';
+    else if (fname.endsWith('.txt')) displayName = 'TXT';
+    else displayName = fname.split('.').pop().toUpperCase();
     return `<button class="tab ${i === 0 ? 'active' : ''}" data-file="${encodeURIComponent(fname)}">${displayName}</button>`;
   });
 
