@@ -145,7 +145,8 @@ async function initDetailPage() {
   const name = window.__MEDIA_NAME__;
   const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
 
-  document.getElementById('media-type-label').textContent = typeLabel;
+  const typeLabelEl = document.getElementById('media-type-label');
+  if (typeLabelEl) typeLabelEl.textContent = typeLabel;
   document.getElementById('detail-title').textContent = decodeURIComponent(name);
 
   document.getElementById('btn-regenerate').addEventListener('click', () => regenerateItem(type, name));

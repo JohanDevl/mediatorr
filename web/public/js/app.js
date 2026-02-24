@@ -201,7 +201,7 @@ function updateStatusIndicator(status) {
   };
 
   const config = statusMap[status] || statusMap.idle;
-  dot.classList.add(config.class);
+  if (config.class) dot.classList.add(config.class);
   text.textContent = config.text;
 }
 
