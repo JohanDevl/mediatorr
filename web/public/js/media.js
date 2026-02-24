@@ -181,6 +181,15 @@ async function initDetailPage() {
   } catch (err) {
     console.error('Error loading detail:', err);
     showToast(err.message, 'error');
+
+    document.getElementById('metadata-content').innerHTML =
+      '<div class="empty-state" style="min-height: 150px;"><div class="empty-state-title">Erreur de chargement</div><div style="font-size: 13px; color: var(--text-muted); margin-top: var(--spacing-sm);">' + escapeHtml(err.message) + '</div></div>';
+
+    document.getElementById('file-tabs').innerHTML = '';
+    document.getElementById('file-viewer').innerHTML =
+      '<div class="empty-state" style="min-height: 200px;"><div class="empty-state-title">Impossible de charger les fichiers</div></div>';
+
+    document.getElementById('source-content').textContent = 'Erreur de chargement';
   }
 }
 

@@ -7,9 +7,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnScan.addEventListener('click', triggerScan);
   }
 
+  const btnStop = document.getElementById('btn-stop-scan');
+  if (btnStop) {
+    btnStop.addEventListener('click', stopScan);
+  }
+
+  SSE.on('status', (data) => {
+    toggleScanButtons(data.state === 'running');
+  });
+
   SSE.on('scan:progress', updateProgress);
   SSE.on('scan:complete', onScanComplete);
 });
+
+function toggleScanButtons(isRunning) {
+  const btnScan = document.getElementById('btn-scan');
+  const btnStop = document.getElementById('btn-stop-scan');
+  if (btnScan) {
+    btnScan.style.display = isRunning ? 'none' : '';
+    btnScan.disabled = false;
+  }
+  if (btnStop) {
+    btnStop.style.display = isRunning ? '' : 'none';
+    btnStop.disabled = false;
+  }
+}
 
 async function loadStats() {
   try {
@@ -100,23 +122,31 @@ async function loadRecentActivity() {
 async function triggerScan() {
   try {
     const btnScan = document.getElementById('btn-scan');
-    if (btnScan) {
-      btnScan.disabled = true;
-    }
+    if (btnScan) btnScan.disabled = true;
 
     await api('/scan', { method: 'POST' });
     showToast('Scan lance', 'success');
-
-    if (btnScan) {
-      btnScan.disabled = false;
-    }
+    toggleScanButtons(true);
   } catch (err) {
     console.error('Error triggering scan:', err);
     showToast(err.message || 'Erreur lors du lancement du scan', 'error');
-    const btnScan = document.getElementById('btn-scan');
-    if (btnScan) {
-      btnScan.disabled = false;
-    }
+    toggleScanButtons(false);
+  }
+}
+
+async function stopScan() {
+  try {
+    const btnStop = document.getElementById('btn-stop-scan');
+    if (btnStop) btnStop.disabled = true;
+
+    await api('/scan/stop', { method: 'POST' });
+    showToast('Scan arrete', 'success');
+    toggleScanButtons(false);
+  } catch (err) {
+    console.error('Error stopping scan:', err);
+    showToast(err.message || 'Erreur', 'error');
+    const btnStop = document.getElementById('btn-stop-scan');
+    if (btnStop) btnStop.disabled = false;
   }
 }
 
@@ -124,32 +154,46 @@ function updateProgress(data) {
   const statusContent = document.getElementById('status-content');
   if (!statusContent) return;
 
+  toggleScanButtons(true);
+
   if (data.current && data.total) {
     const percent = Math.round((data.current / data.total) * 100);
+    const mediaLabel = data.mediaType ? `[${escapeHtml(data.mediaType)}] ` : '';
+    const itemName = data.currentItem ? escapeHtml(data.currentItem) : '';
     statusContent.innerHTML = `
       <div class="card-content">
-        <p style="margin-bottom: 8px;">Processing: <strong>${escapeHtml(data.current)}/${escapeHtml(data.total)}</strong> (${percent}%)</p>
+        <p style="margin-bottom: 4px; font-size: 13px; color: var(--text-secondary);">${mediaLabel}${itemName}</p>
+        <p style="margin-bottom: 8px;">Traitement: <strong>${data.current}/${data.total}</strong> (${percent}%)</p>
         <div style="width: 100%; height: 8px; background-color: var(--border); border-radius: 4px; overflow: hidden;">
           <div style="width: ${percent}%; height: 100%; background-color: var(--accent); transition: width 200ms ease;"></div>
         </div>
+      </div>
+    `;
+  } else {
+    statusContent.innerHTML = `
+      <div class="card-content">
+        <span class="badge badge-info">Scan en cours...</span>
       </div>
     `;
   }
 }
 
 function onScanComplete(data) {
+  toggleScanButtons(false);
   loadStats();
   loadRecentActivity();
-  showToast('Scan termine', 'success');
+
+  const message = data.stoppedManually ? 'Scan arrete manuellement' : 'Scan termine';
+  showToast(message, 'success');
 
   const statusContent = document.getElementById('status-content');
   if (statusContent) {
     const stats = data.stats || {};
     statusContent.innerHTML = `
       <div class="card-content">
-        <span class="badge badge-success">Complete</span>
+        <span class="badge badge-success">${data.stoppedManually ? 'Arrete' : 'Complete'}</span>
         <p style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);">
-          ${stats.films || 0} films, ${stats.series || 0} series, ${stats.musiques || 0} musiques
+          ${stats.processed || 0} traites, ${stats.skipped || 0} ignores
         </p>
       </div>
     `;

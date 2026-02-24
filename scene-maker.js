@@ -1772,15 +1772,19 @@ async function runTasks(tasks, limit) {
         const full = path.join(src, e.name);
 
         if (e.isFile() && isVideoFile(e.name)) {
-          tasks.push(() =>
-            processFile(full, media.dest, ++i, total, 'Film', TMDB_TYPE_BY_MEDIA[media.name], media.sources)
-          );
+          tasks.push(() => {
+            const idx = ++i;
+            writeStatus({ state: 'running', startedAt: new Date().toISOString(), type: 'full', current: idx, total, currentItem: e.name, mediaType: 'films' });
+            return processFile(full, media.dest, idx, total, 'Film', TMDB_TYPE_BY_MEDIA[media.name], media.sources);
+          });
         }
 
         if (e.isDirectory()) {
-          tasks.push(() =>
-            processFilmFolder(full, media.dest, ++i, total, media.sources)
-          );
+          tasks.push(() => {
+            const idx = ++i;
+            writeStatus({ state: 'running', startedAt: new Date().toISOString(), type: 'full', current: idx, total, currentItem: e.name, mediaType: 'films' });
+            return processFilmFolder(full, media.dest, idx, total, media.sources);
+          });
         }
       }
 
@@ -1811,15 +1815,19 @@ async function runTasks(tasks, limit) {
         const full = path.join(src, e.name);
 
         if (e.isFile() && isVideoFile(e.name)) {
-          tasks.push(() =>
-            processFile(full, media.dest, ++i, total, 'Série fichier', TMDB_TYPE_BY_MEDIA[media.name], media.sources)
-          );
+          tasks.push(() => {
+            const idx = ++i;
+            writeStatus({ state: 'running', startedAt: new Date().toISOString(), type: 'full', current: idx, total, currentItem: e.name, mediaType: 'series' });
+            return processFile(full, media.dest, idx, total, 'Série fichier', TMDB_TYPE_BY_MEDIA[media.name], media.sources);
+          });
         }
 
         if (e.isDirectory()) {
-          tasks.push(() =>
-            processSeriesFolder(full, media.dest, ++i, total)
-          );
+          tasks.push(() => {
+            const idx = ++i;
+            writeStatus({ state: 'running', startedAt: new Date().toISOString(), type: 'full', current: idx, total, currentItem: e.name, mediaType: 'series' });
+            return processSeriesFolder(full, media.dest, idx, total);
+          });
         }
       }
 
@@ -1830,7 +1838,7 @@ async function runTasks(tasks, limit) {
 
       await runTasks(tasks, PARALLEL_JOBS);
     }
-	
+
 	if (media.name === 'musiques') {
   const allEntries = [];
   for (const src of media.sources) {
@@ -1844,14 +1852,16 @@ async function runTasks(tasks, limit) {
   let i = 0;
   const total = allEntries.length;
 
-  const tasks = allEntries.map(({ entry: e, source: src }) => () =>
-    processMusicEntry(
+  const tasks = allEntries.map(({ entry: e, source: src }) => () => {
+    const idx = ++i;
+    writeStatus({ state: 'running', startedAt: new Date().toISOString(), type: 'full', current: idx, total, currentItem: e.name, mediaType: 'musiques' });
+    return processMusicEntry(
       path.join(src, e.name),
       media.dest,
-      ++i,
+      idx,
       total
-    )
-  );
+    );
+  });
 
   await runTasks(tasks, PARALLEL_JOBS);
 }

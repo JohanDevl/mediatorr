@@ -277,6 +277,22 @@ router.post('/scan', (req, res) => {
   }
 });
 
+// POST /api/scan/stop - Stop running scan
+router.post('/scan/stop', (req, res) => {
+  try {
+    const result = regenerate.stopScan();
+
+    if (result.error) {
+      return res.status(400).json(result);
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error('Error stopping scan:', err);
+    res.status(500).json({ error: 'Failed to stop scan' });
+  }
+});
+
 // GET /api/events - SSE stream
 router.get('/events', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
@@ -288,6 +304,12 @@ router.get('/events', (req, res) => {
   try {
     const status = events.getLastStatus();
     res.write(`event: status\ndata: ${JSON.stringify(status)}\n\n`);
+
+    // Send buffered logs to new connections
+    const bufferedLogs = events.getLogBuffer();
+    for (const log of bufferedLogs) {
+      res.write(`event: log\ndata: ${JSON.stringify(log)}\n\n`);
+    }
 
     const onProgress = (data) => res.write(`event: scan:progress\ndata: ${JSON.stringify(data)}\n\n`);
     const onComplete = (data) => res.write(`event: scan:complete\ndata: ${JSON.stringify(data)}\n\n`);

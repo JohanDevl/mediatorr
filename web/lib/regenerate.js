@@ -98,6 +98,32 @@ function deleteMetadataArtifacts(type, name) {
   return { deleted };
 }
 
+function stopScan() {
+  if (!activeProcess) {
+    return { error: 'No scan in progress' };
+  }
+
+  try {
+    const pid = activeProcess.pid;
+    activeProcess.kill('SIGTERM');
+    // Force kill after 5s if still alive
+    setTimeout(() => {
+      try { process.kill(pid, 'SIGKILL'); } catch {}
+    }, 5000);
+    // Ensure status file reflects stopped state
+    try {
+      fs.writeFileSync('/data/status.json', JSON.stringify({
+        state: 'idle',
+        lastScan: new Date().toISOString(),
+        stoppedManually: true
+      }));
+    } catch {}
+    return { status: 'stopped' };
+  } catch (err) {
+    return { error: `Failed to stop scan: ${err.message}` };
+  }
+}
+
 function isRunning() {
   return activeProcess !== null;
 }
@@ -106,5 +132,6 @@ module.exports = {
   deleteArtifacts,
   deleteMetadataArtifacts,
   triggerScan,
+  stopScan,
   isRunning,
 };

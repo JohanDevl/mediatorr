@@ -7,6 +7,35 @@ const STATUS_FILE = '/data/status.json';
 const emitter = new EventEmitter();
 emitter.setMaxListeners(50);
 
+// Log ring buffer
+const LOG_BUFFER_SIZE = 200;
+const logBuffer = [];
+
+emitter.on('scan:log', (entry) => {
+  let level = 'info';
+  const msg = entry.message || '';
+  if (msg.startsWith('\u274C') || entry.type === 'stderr') {
+    level = 'error';
+  } else if (msg.startsWith('\u26A0\uFE0F')) {
+    level = 'warning';
+  }
+
+  const enriched = {
+    ...entry,
+    level,
+    timestamp: new Date().toISOString()
+  };
+
+  logBuffer.push(enriched);
+  if (logBuffer.length > LOG_BUFFER_SIZE) {
+    logBuffer.shift();
+  }
+});
+
+function getLogBuffer() {
+  return logBuffer;
+}
+
 let lastStatus = null;
 let watchFile = null;
 
@@ -52,4 +81,5 @@ startWatching();
 
 module.exports = emitter;
 module.exports.getLastStatus = getLastStatus;
+module.exports.getLogBuffer = getLogBuffer;
 module.exports.stopWatching = stopWatching;
