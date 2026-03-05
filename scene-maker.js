@@ -21,6 +21,7 @@ const ENABLE_MUSIQUES = process.env.ENABLE_MUSIQUES === 'true';
 const ENABLE_PREZ = process.env.ENABLE_PREZ !== 'false';
 const FORCE_PREZ = process.env.FORCE_PREZ === 'true';
 const PREZ_STYLE = parseInt(process.env.PREZ_STYLE) || 1;
+const ENABLE_CLEANUP = process.env.ENABLE_CLEANUP !== 'false';
 
 function parseDirs(envVar, defaultDir) {
   const raw = process.env[envVar];
@@ -118,6 +119,7 @@ let tmdbMissing = 0;
 let itunesFound = 0;
 let itunesMissing = 0;
 let prezGenerated = 0;
+let orphansCleaned = 0;
 const startTime = Date.now();
 
 // ---------------------- UTIL ----------------------
@@ -984,6 +986,53 @@ function hasSourceChanged(srcInfoPath, sourceFiles, expectedType = null) {
   }
 }
 
+// ---------------------- ORPHAN CLEANUP ----------------------
+function cleanOrphanedArtifacts(destDir, mediaName) {
+  if (!ENABLE_CLEANUP) return;
+  if (!fs.existsSync(destDir)) return;
+
+  const subdirs = fs.readdirSync(destDir, { withFileTypes: true })
+    .filter(d => d.isDirectory());
+
+  for (const sub of subdirs) {
+    const artifactDir = path.join(destDir, sub.name);
+    const srcInfoFiles = fs.readdirSync(artifactDir).filter(f => f.endsWith('.srcinfo'));
+
+    if (srcInfoFiles.length === 0) continue;
+
+    const srcInfoPath = path.join(artifactDir, srcInfoFiles[0]);
+    let sourcePaths;
+    try {
+      const raw = JSON.parse(fs.readFileSync(srcInfoPath, 'utf-8'));
+      const files = Array.isArray(raw) ? raw : (raw.files || []);
+      sourcePaths = files.map(f => f.path).filter(Boolean);
+    } catch {
+      continue;
+    }
+
+    if (sourcePaths.length === 0) continue;
+
+    const anySourceExists = sourcePaths.some(p => fs.existsSync(p));
+    if (anySourceExists) continue;
+
+    // For folder-based entries, check if the parent folder still exists
+    const parentDir = path.dirname(sourcePaths[0]);
+    const isTopLevelSource = MEDIA_CONFIG.some(m =>
+      m.sources.some(s => s === parentDir)
+    );
+
+    if (!isTopLevelSource && fs.existsSync(parentDir)) continue;
+
+    try {
+      fs.rmSync(artifactDir, { recursive: true, force: true });
+      orphansCleaned++;
+      console.log(`🗑️ Orphelin supprimé : ${sub.name} (${mediaName})`);
+    } catch (err) {
+      console.error(`⚠️ Erreur suppression orphelin : ${sub.name}`, err.message);
+    }
+  }
+}
+
 // ---------------------- TORRENT MODIFY ----------------------
 async function modifyTorrentTrackers(torrentPath) {
   const outputPath = torrentPath.replace(/\.torrent$/, '');
@@ -1798,6 +1847,7 @@ async function runTasks(tasks, limit) {
   await runTasks(tasks, PARALLEL_JOBS);
 }
 
+    cleanOrphanedArtifacts(media.dest, media.name);
   }
 
   const totalTime = Date.now() - startTime;
@@ -1821,6 +1871,7 @@ console.log(`⚠️ TMDb manquants     : ${tmdbMissing}`);
 console.log(`🎵 iTunes trouvés     : ${itunesFound}`);
 console.log(`⚠️ iTunes manquants   : ${itunesMissing}`);
 console.log(`📜 Prez générées      : ${prezGenerated}`);
+console.log(`🗑️ Orphelins nettoyés : ${orphansCleaned}`);
 console.log(`⏱️ Temps total        : ${formatDuration(totalTime)}`);
 console.log('==============================');
 })();
