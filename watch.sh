@@ -23,10 +23,27 @@ watch_dir() {
   echo "👀 Surveillance activée pour $LABEL : $DIR"
 
   inotifywait -m -r \
-    -e create -e moved_to -e close_write \
-    --format '%w%f' \
-    "$DIR" 2>/dev/null | while read path
+    -e create -e moved_to -e close_write -e delete -e moved_from \
+    --format '%e %w%f' \
+    "$DIR" 2>/dev/null | while read EVENT_LINE
   do
+    EVENT="${EVENT_LINE%% *}"
+    path="${EVENT_LINE#* }"
+
+    # suppression/déplacement → rescan pour nettoyage orphelins
+    case "$EVENT" in
+      DELETE*|MOVED_FROM*)
+        NOW=$(date +%s)
+        if [ $((NOW - LAST_SCAN)) -lt "$COOLDOWN" ]; then
+          continue
+        fi
+        echo "🗑️ Suppression détectée ($LABEL) : $(basename "$path")"
+        LAST_SCAN=$(date +%s)
+        node /app/scene-maker.js || echo "⚠️ Erreur scene-maker ($LABEL), reprise au prochain événement"
+        continue
+        ;;
+    esac
+
     # on ignore les fichiers temporaires eux-mêmes
     case "$path" in
       *.part|*.tmp|*.crdownload)
