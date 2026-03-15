@@ -273,18 +273,43 @@ function renderFileList(files, type, name) {
     return '';
   }
 
+  const mimeTypes = { torrent: 'application/x-bittorrent', nfo: 'text/plain', txt: 'text/plain', prez: 'text/plain', srcinfo: 'application/json' };
+
   container.innerHTML = files.map(f => {
     const fname = f.name || f;
     const size = f.size ? formatSize(f.size) : '';
     const url = `/api/media/${type}/${encodeURIComponent(name)}/download/${encodeURIComponent(fname)}`;
+    const ext = fname.split('.').pop().toLowerCase();
+    const mime = mimeTypes[ext] || 'application/octet-stream';
 
-    return `<a href="${url}" download="${escapeHtml(fname)}" class="file-chip ${getTypeClass(fname)}" title="${escapeHtml(fname)} (${size})">
+    return `<a href="${url}" draggable="true" data-filename="${escapeHtml(fname)}" data-mime="${mime}" class="file-chip ${getTypeClass(fname)}" title="${escapeHtml(fname)} (${size})">
       <span class="file-chip-icon">${getIcon(fname)}</span>
       <span class="file-chip-name">${escapeHtml(fname)}</span>
       <span class="file-chip-size">${size}</span>
       <span class="file-chip-download">\u2193</span>
     </a>`;
   }).join('');
+
+  container.querySelectorAll('.file-chip').forEach(chip => {
+    chip.addEventListener('click', (e) => {
+      e.preventDefault();
+      const a = document.createElement('a');
+      a.href = chip.href;
+      a.download = chip.dataset.filename;
+      document.body.appendChild(a);
+      try { a.click(); } finally { document.body.removeChild(a); }
+    });
+
+    chip.addEventListener('dragstart', (e) => {
+      const filename = chip.dataset.filename;
+      const mime = chip.dataset.mime;
+      const absoluteUrl = new URL(chip.href, window.location.origin).href;
+      const safeFilename = filename.replace(/:/g, '_');
+      e.dataTransfer.setData('DownloadURL', `${mime}:${safeFilename}:${absoluteUrl}`);
+      e.dataTransfer.setData('text/uri-list', absoluteUrl);
+      e.dataTransfer.effectAllowed = 'copy';
+    });
+  });
 }
 
 function renderFileTabs(files, type, name) {
@@ -313,7 +338,7 @@ function renderFileTabs(files, type, name) {
     return `<button class="tab ${i === 0 ? 'active' : ''}" data-file="${encodeURIComponent(fname)}">${displayName}</button>`;
   });
 
-  tabsEl.innerHTML = tabs.join('');
+  tabsEl.innerHTML = tabs.join('') + '<button class="btn btn-secondary btn-small" id="btn-copy-content" title="Copier le contenu">\u{1F4CB} Copier</button>';
 
   tabsEl.querySelectorAll('.tab').forEach((tab, idx) => {
     tab.addEventListener('click', async (e) => {
@@ -331,6 +356,36 @@ function renderFileTabs(files, type, name) {
       }
     });
   });
+
+  const copyBtn = document.getElementById('btn-copy-content');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async () => {
+      const pre = viewerEl.querySelector('pre');
+      if (!pre) return;
+      try {
+        await navigator.clipboard.writeText(pre.textContent);
+        copyBtn.textContent = 'Copie !';
+        copyBtn.disabled = true;
+        setTimeout(() => { copyBtn.textContent = '\u{1F4CB} Copier'; copyBtn.disabled = false; }, 2000);
+      } catch {
+        const textarea = document.createElement('textarea');
+        textarea.value = pre.textContent;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        if (ok) {
+          copyBtn.textContent = 'Copie !';
+          copyBtn.disabled = true;
+          setTimeout(() => { copyBtn.textContent = '\u{1F4CB} Copier'; copyBtn.disabled = false; }, 2000);
+        } else {
+          showToast('Copie echouee', 'error');
+        }
+      }
+    });
+  }
 
   if (viewableFiles.length > 0) {
     tabsEl.querySelector('.tab').click();

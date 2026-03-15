@@ -645,6 +645,12 @@ input[type='checkbox'] {
   border-bottom-color: var(--accent);
 }
 
+.tabs .btn {
+  align-self: center;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .pre-viewer {
   background-color: var(--bg-secondary);
   border: 1px solid var(--border);
