@@ -4,13 +4,20 @@ services:
     container_name: mediatorr
     restart: unless-stopped
 
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5765/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
     ports:
       - "5765:5765"
 
     environment:
-      # User mapping
-      - PUID=1000
-      - PGID=1000
+      # User mapping (disabled - docker-entrypoint.sh not used in this image)
+      # - PUID=1000
+      # - PGID=1000
       # Activation des médias
       - ENABLE_FILMS=true
       - ENABLE_SERIES=false

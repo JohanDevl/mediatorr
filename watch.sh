@@ -51,13 +51,13 @@ watch_dir() {
         fi
         echo "✅ Téléchargement terminé ($LABEL) : $(basename "$path")"
         LAST_SCAN=$(date +%s)
-        node /app/scene-maker.js || echo "⚠️ Erreur scene-maker ($LABEL), reprise au prochain événement"
+        flock -n /tmp/scene-maker.lock node /app/scene-maker.js || echo "⚠️ Erreur scene-maker ($LABEL), reprise au prochain événement"
         ;;
       *)
         if [ -d "$path" ]; then
           echo "📁 Nouveau dossier détecté ($LABEL) : $(basename "$path")"
           LAST_SCAN=$(date +%s)
-          node /app/scene-maker.js || echo "⚠️ Erreur scene-maker ($LABEL), reprise au prochain événement"
+          flock -n /tmp/scene-maker.lock node /app/scene-maker.js || echo "⚠️ Erreur scene-maker ($LABEL), reprise au prochain événement"
         fi
         ;;
     esac

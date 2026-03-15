@@ -32,9 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadConfig() {
   try {
-    const response = await fetch('/api/config');
-    if (!response.ok) throw new Error('Failed to load config');
-    const config = await response.json();
+    const config = await api('/config');
 
     document.getElementById('cfg-trackers').value = (config.trackers || []).join('\n');
     document.getElementById('cfg-tmdb-key').value = config.tmdbApiKey || '';
@@ -121,6 +119,9 @@ function updateScheduleDescription(expr) {
 
 async function saveConfig(andScan) {
   try {
+    document.getElementById('btn-save').disabled = true;
+    document.getElementById('btn-save-scan').disabled = true;
+
     const config = collectConfig();
 
     if (!config.trackers.length) {
@@ -128,22 +129,21 @@ async function saveConfig(andScan) {
       return;
     }
 
-    const response = await fetch('/api/config', {
+    await api('/config', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(config)
+      body: config
     });
-
-    if (!response.ok) throw new Error('Failed to save config');
 
     showToast('Configuration sauvegardee', 'success');
 
     if (andScan) {
-      const scanResponse = await fetch('/api/scan', { method: 'POST' });
-      if (!scanResponse.ok) throw new Error('Failed to start scan');
+      await api('/scan', { method: 'POST' });
       showToast('Scan lance', 'success');
     }
   } catch (e) {
     showToast(e.message, 'error');
+  } finally {
+    document.getElementById('btn-save').disabled = false;
+    document.getElementById('btn-save-scan').disabled = false;
   }
 }

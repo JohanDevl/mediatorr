@@ -86,8 +86,12 @@ function mergeConfigs(fileConfig, envConfig, defaults) {
   for (const key in defaults) {
     if (fileConfig.hasOwnProperty(key)) {
       result[key] = fileConfig[key];
-    } else if (envConfig[key] !== undefined && envConfig[key] !== null && envConfig[key] !== '' && envConfig[key].length > 0) {
-      result[key] = envConfig[key];
+    } else if (envConfig[key] !== undefined && envConfig[key] !== null && envConfig[key] !== '') {
+      if (Array.isArray(envConfig[key]) && envConfig[key].length === 0) {
+        result[key] = defaults[key];
+      } else {
+        result[key] = envConfig[key];
+      }
     } else {
       result[key] = defaults[key];
     }

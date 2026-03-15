@@ -109,6 +109,7 @@ function stopScan() {
     // Force kill after 5s if still alive
     setTimeout(() => {
       try { process.kill(pid, 'SIGKILL'); } catch {}
+      activeProcess = null;
     }, 5000);
     // Ensure status file reflects stopped state
     try {

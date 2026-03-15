@@ -95,11 +95,5 @@ document.addEventListener('DOMContentLoaded', () => {
     viewer.scrollTop = viewer.scrollHeight;
   }
 
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
   renderLogs();
 });

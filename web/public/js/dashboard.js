@@ -50,17 +50,9 @@ async function loadStats() {
     const lastScanContent = document.getElementById('last-scan-content');
     if (lastScanContent) {
       if (stats.lastScan) {
-        const lastDate = formatDate(stats.lastScan.lastScan);
-        const duration = stats.lastScan.duration || '-';
-        const filmsCount = stats.lastScan.films || 0;
-        const seriesCount = stats.lastScan.series || 0;
-        const musiquesCount = stats.lastScan.musiques || 0;
-
         lastScanContent.innerHTML = `
           <div class="card-content">
-            <p>Date: <strong>${escapeHtml(lastDate)}</strong></p>
-            <p>Duration: <strong>${escapeHtml(duration)}</strong></p>
-            <p>Films: <strong>${filmsCount}</strong>, Series: <strong>${seriesCount}</strong>, Musiques: <strong>${musiquesCount}</strong></p>
+            <p>Dernier scan: <strong>${escapeHtml(formatDate(stats.lastScan))}</strong></p>
           </div>
         `;
       } else {
@@ -90,7 +82,7 @@ async function loadRecentActivity() {
       ...(musiquesResult.items || []).map(item => ({ ...item, type: 'musiques', icon: '♪' }))
     ];
 
-    allItems.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    allItems.sort((a, b) => new Date(b.modifiedAt || 0) - new Date(a.modifiedAt || 0));
     const recentItems = allItems.slice(0, 10);
 
     if (recentItems.length === 0) {

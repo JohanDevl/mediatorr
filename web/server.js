@@ -75,8 +75,29 @@ config.saveConfig = function(data) {
 setupCronSchedule();
 
 const PORT = process.env.WEB_PORT || 5765;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
+
+function gracefulShutdown() {
+  console.log('Shutting down gracefully...');
+
+  if (scheduledTask) {
+    scheduledTask.stop();
+  }
+
+  const events = require('./lib/events');
+  events.stopWatching();
+
+  require('../db').close();
+
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+}
+
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
 
 module.exports = app;
