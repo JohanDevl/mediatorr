@@ -187,6 +187,7 @@ async function initDetailPage() {
   // Files section
   try {
     if (detail.files && detail.files.length > 0) {
+      renderFileList(detail.files, type, name);
       renderFileTabs(detail.files, type, name);
     } else {
       document.getElementById('file-tabs').innerHTML =
@@ -243,6 +244,47 @@ function renderMetadata(metadata, type) {
   html += ' <span class="badge badge-success">Cache OK</span>';
   html += '</div>';
   el.innerHTML = html;
+}
+
+function renderFileList(files, type, name) {
+  const container = document.getElementById('file-list');
+  if (!container || !files || files.length === 0) return;
+
+  const icons = {
+    torrent: '\u{1F9F2}', nfo: '\u2139\uFE0F', txt: '\u{1F4C4}',
+    prez: '\u{1F4CB}', srcinfo: '\u{1F527}'
+  };
+
+  function getIcon(fname) {
+    if (fname.endsWith('.torrent')) return icons.torrent;
+    if (fname.includes('.prez')) return icons.prez;
+    if (fname.endsWith('.srcinfo')) return icons.srcinfo;
+    if (fname.endsWith('.nfo')) return icons.nfo;
+    if (fname.endsWith('.txt')) return icons.txt;
+    return '\u{1F4C1}';
+  }
+
+  function getTypeClass(fname) {
+    if (fname.endsWith('.torrent')) return 'file-type-torrent';
+    if (fname.includes('.prez')) return 'file-type-prez';
+    if (fname.endsWith('.srcinfo')) return 'file-type-srcinfo';
+    if (fname.endsWith('.nfo')) return 'file-type-nfo';
+    if (fname.endsWith('.txt')) return 'file-type-txt';
+    return '';
+  }
+
+  container.innerHTML = files.map(f => {
+    const fname = f.name || f;
+    const size = f.size ? formatSize(f.size) : '';
+    const url = `/api/media/${type}/${encodeURIComponent(name)}/download/${encodeURIComponent(fname)}`;
+
+    return `<a href="${url}" download="${escapeHtml(fname)}" class="file-chip ${getTypeClass(fname)}" title="${escapeHtml(fname)} (${size})">
+      <span class="file-chip-icon">${getIcon(fname)}</span>
+      <span class="file-chip-name">${escapeHtml(fname)}</span>
+      <span class="file-chip-size">${size}</span>
+      <span class="file-chip-download">\u2193</span>
+    </a>`;
+  }).join('');
 }
 
 function renderFileTabs(files, type, name) {

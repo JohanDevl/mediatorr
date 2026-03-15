@@ -82,6 +82,10 @@ router.get('/media/:type/:name/file/:filename', (req, res) => {
       return res.status(400).json({ error: 'Invalid media type' });
     }
 
+    if (!name || name.includes('..') || name.includes('/')) {
+      return res.status(400).json({ error: 'Invalid name' });
+    }
+
     const content = media.getFileContent(type, name, filename);
 
     if (content === null) {
@@ -92,6 +96,42 @@ router.get('/media/:type/:name/file/:filename', (req, res) => {
   } catch (err) {
     console.error('Error getting file content:', err);
     res.status(500).json({ error: 'Failed to get file content' });
+  }
+});
+
+// GET /api/media/:type/:name/download/:filename - Download file
+router.get('/media/:type/:name/download/:filename', (req, res) => {
+  try {
+    const { type, name, filename } = req.params;
+
+    if (!['films', 'series', 'musiques'].includes(type)) {
+      return res.status(400).json({ error: 'Invalid media type' });
+    }
+
+    if (!name || name.includes('..') || name.includes('/')) {
+      return res.status(400).json({ error: 'Invalid name' });
+    }
+
+    const filePath = media.getFilePath(type, name, filename);
+
+    if (!filePath) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    const ext = filename.split('.').pop().toLowerCase();
+    const mimeTypes = {
+      'torrent': 'application/x-bittorrent',
+      'nfo': 'text/plain; charset=utf-8',
+      'txt': 'text/plain; charset=utf-8',
+      'srcinfo': 'application/json'
+    };
+
+    res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
+    res.sendFile(filePath);
+  } catch (err) {
+    console.error('Error downloading file:', err);
+    res.status(500).json({ error: 'Failed to download file' });
   }
 });
 

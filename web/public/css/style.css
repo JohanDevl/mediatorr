@@ -625,9 +625,15 @@ input[type='checkbox'] {
   padding: var(--spacing-md) var(--spacing-lg);
   cursor: pointer;
   color: var(--text-secondary);
+  background: transparent;
+  border: none;
   border-bottom: 2px solid transparent;
   transition: all var(--transition);
   font-weight: 500;
+  font-family: var(--font);
+  font-size: 14px;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .tab:hover {
@@ -649,6 +655,94 @@ input[type='checkbox'] {
   font-size: 13px;
   line-height: 1.5;
   color: var(--text-secondary);
+}
+
+/* ===========================
+   COMPONENTS: FILE LIST
+   =========================== */
+
+.file-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+}
+
+.file-list:empty {
+  display: none;
+}
+
+.file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all var(--transition);
+  cursor: pointer;
+}
+
+.file-chip:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+  background-color: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.file-chip-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.file-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.file-chip-size {
+  color: var(--text-muted);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.file-chip-download {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: color var(--transition);
+}
+
+.file-chip:hover .file-chip-download {
+  color: var(--accent);
+}
+
+.file-type-torrent {
+  border-left: 3px solid var(--success);
+}
+
+.file-type-nfo {
+  border-left: 3px solid var(--accent);
+}
+
+.file-type-prez {
+  border-left: 3px solid var(--info);
+}
+
+.file-type-txt {
+  border-left: 3px solid var(--warning);
+}
+
+.file-type-srcinfo {
+  border-left: 3px solid var(--text-muted);
 }
 
 .log-viewer {

@@ -209,6 +209,29 @@ function getFileContent(type, name, filename) {
 }
 
 /**
+ * Get validated file path for download
+ */
+function getFilePath(type, name, filename) {
+  if (!/^[a-zA-Z0-9._-]+$/.test(filename)) {
+    return null;
+  }
+
+  const filePath = path.join(TORRENT_BASE, type, name, filename);
+  const normalizedPath = path.normalize(filePath);
+  const mediaDir = path.join(TORRENT_BASE, type, name);
+
+  if (!normalizedPath.startsWith(path.normalize(mediaDir))) {
+    return null;
+  }
+
+  if (!fs.existsSync(normalizedPath)) {
+    return null;
+  }
+
+  return normalizedPath;
+}
+
+/**
  * Get statistics across all media types
  */
 function getStats() {
@@ -271,5 +294,6 @@ module.exports = {
   listMedia,
   getMediaDetail,
   getFileContent,
+  getFilePath,
   getStats
 };
