@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
 
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5765/api/health"]
+      test: ["CMD-SHELL", "if [ \"$ENABLE_WEB\" = 'true' ] || [ -z \"$ENABLE_WEB\" ]; then curl -f http://localhost:5765/api/health; else pgrep -f watch.sh > /dev/null; fi"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -33,6 +33,9 @@ services:
       # - MUSIQUES_DIRS=/musiques
       # Optionnel
       - PARALLEL_JOBS=1
+      # Comportement classique
+      # - ENABLE_INITIAL_SCAN=true
+      # - ENABLE_CLEANUP=true
       # Web interface
       # - ENABLE_WEB=true
       # - WEB_PORT=5765
