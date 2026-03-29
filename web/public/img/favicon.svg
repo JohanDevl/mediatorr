@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background -->
+  <circle cx="100" cy="100" r="100" fill="#f8fafc"/>
+
+  <!-- Play button (film/media theme) -->
+  <circle cx="100" cy="100" r="85" fill="#3b82f6"/>
+
+  <!-- Triangle play icon -->
+  <polygon points="75,65 75,135 135,100" fill="#ffffff"/>
+
+  <!-- Film strip effect on sides -->
+  <rect x="45" y="80" width="12" height="40" fill="rgba(255,255,255,0.3)" rx="2"/>
+  <rect x="143" y="80" width="12" height="40" fill="rgba(255,255,255,0.3)" rx="2"/>
+</svg>

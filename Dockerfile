@@ -71,6 +71,11 @@ USER node
 VOLUME ["/data"]
 
 # ----------------------
+# Web interface
+# ----------------------
+EXPOSE 5765
+
+# ----------------------
 # Lancement
 # ----------------------
 CMD ["sh", "/app/watch.sh"]

@@ -4,10 +4,20 @@ services:
     container_name: mediatorr
     restart: unless-stopped
 
+    healthcheck:
+      test: ["CMD-SHELL", "if [ \"$ENABLE_WEB\" = 'true' ] || [ -z \"$ENABLE_WEB\" ]; then curl -f http://localhost:5765/api/health; else pgrep -f watch.sh > /dev/null; fi"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    ports:
+      - "5765:5765"
+
     environment:
-      # User mapping
-      - PUID=1000
-      - PGID=1000
+      # User mapping (disabled - docker-entrypoint.sh not used in this image)
+      # - PUID=1000
+      # - PGID=1000
       # Activation des médias
       - ENABLE_FILMS=true
       - ENABLE_SERIES=false
@@ -23,6 +33,12 @@ services:
       # - MUSIQUES_DIRS=/musiques
       # Optionnel
       - PARALLEL_JOBS=1
+      # Comportement classique
+      # - ENABLE_INITIAL_SCAN=true
+      # - ENABLE_CLEANUP=true
+      # Web interface
+      # - ENABLE_WEB=true
+      # - WEB_PORT=5765
       # - ENABLE_PREZ=true
       # - FORCE_PREZ=false
       # - PREZ_STYLE=1          # 1-6 (1=badges+grid, 2=compact, 3=colored cards, 4=table, 5=ultra-minimal, 6=quote blocks)

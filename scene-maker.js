@@ -8,12 +8,31 @@ const axios = require('axios');
 const qs = require('querystring');
 const fg = require('fast-glob');
 const stringSimilarity = require('string-similarity');
+const db = require('./db');
+
+// ---------------------- PERSISTENT CONFIG ----------------------
+const CONFIG_FILE = '/data/config.json';
+let persistentConfig = {};
+try {
+  if (fs.existsSync(CONFIG_FILE)) {
+    persistentConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+  }
+} catch (e) {
+  console.warn('⚠️ Error reading config.json, using env vars:', e.message);
+}
+
+function cfg(key, envKey, defaultVal) {
+  if (persistentConfig[key] !== undefined) return persistentConfig[key];
+  if (process.env[envKey] !== undefined) return process.env[envKey];
+  return defaultVal;
+}
 
 // ---------------------- CONFIG ----------------------
 const DEST_DIR = '/data/torrent';
 const CACHE_DIR = '/data/cache_tmdb';
 const CACHE_DIR_ITUNES = '/data/cache_itunes';
 const FINGERPRINT_FILE = '/data/trackers.fingerprint.sha256';
+const STATUS_FILE = '/data/status.json';
 
 const ENABLE_FILMS = process.env.ENABLE_FILMS === 'true';
 const ENABLE_SERIES = process.env.ENABLE_SERIES === 'true';
@@ -23,7 +42,9 @@ const FORCE_PREZ = process.env.FORCE_PREZ === 'true';
 const PREZ_STYLE = parseInt(process.env.PREZ_STYLE) || 1;
 const ENABLE_CLEANUP = process.env.ENABLE_CLEANUP !== 'false';
 
-function parseDirs(envVar, defaultDir) {
+function parseDirs(configKey, envVar, defaultDir) {
+  const configVal = persistentConfig[configKey];
+  if (Array.isArray(configVal) && configVal.length) return configVal;
   const raw = process.env[envVar];
   if (!raw || !raw.trim()) return [defaultDir];
   const dirs = [...new Set(raw.split(',').map(d => d.trim().replace(/\/+$/, '')).filter(Boolean))];
@@ -33,34 +54,35 @@ function parseDirs(envVar, defaultDir) {
 const MEDIA_CONFIG = [
   ENABLE_FILMS && {
     name: 'films',
-    sources: parseDirs('FILMS_DIRS', '/films'),
+    sources: parseDirs('filmsDirs', 'FILMS_DIRS', '/films'),
     dest: path.join(DEST_DIR, 'films')
   },
   ENABLE_MUSIQUES && {
     name: 'musiques',
-    sources: parseDirs('MUSIQUES_DIRS', '/musiques'),
+    sources: parseDirs('musiquesDirs', 'MUSIQUES_DIRS', '/musiques'),
     dest: path.join(DEST_DIR, 'musiques'),
     api: 'itunes'
   },
   ENABLE_SERIES && {
     name: 'series',
-    sources: parseDirs('SERIES_DIRS', '/series'),
+    sources: parseDirs('seriesDirs', 'SERIES_DIRS', '/series'),
     dest: path.join(DEST_DIR, 'series')
   }
 ].filter(Boolean);
 
-const TRACKERS = (process.env.TRACKERS || '')
-  .split(',')
-  .map(t => t.trim())
-  .filter(Boolean);
+const TRACKERS = (() => {
+  const configTrackers = persistentConfig.trackers;
+  if (Array.isArray(configTrackers) && configTrackers.length) return configTrackers;
+  return (process.env.TRACKERS || '').split(',').map(t => t.trim()).filter(Boolean);
+})();
   
 const TMDB_TYPE_BY_MEDIA = {
   films: 'movie',
   series: 'tv'
 };
 
-const TMDB_API_KEY = process.env.TMDB_API_KEY;
-const PARALLEL_JOBS = Math.max(1, parseInt(process.env.PARALLEL_JOBS || '1', 10));
+const TMDB_API_KEY = cfg('tmdbApiKey', 'TMDB_API_KEY', '');
+const PARALLEL_JOBS = Math.max(1, parseInt(cfg('parallelJobs', 'PARALLEL_JOBS', '1'), 10));
 const NEED_TMDB = MEDIA_CONFIG.some(m => m.name === 'films' || m.name === 'series');
 
 if (!TRACKERS.length || !MEDIA_CONFIG.length || (NEED_TMDB && !TMDB_API_KEY)) {
@@ -216,6 +238,12 @@ function formatDuration(ms) {
   const m = Math.floor(s / 60);
   const h = Math.floor(m / 60);
   return `${h}h ${m % 60}m ${s % 60}s`;
+}
+
+function writeStatus(data) {
+  try {
+    fs.writeFileSync(STATUS_FILE, JSON.stringify(data, null, 2));
+  } catch {}
 }
 
 // ---------------------- PREZ GENERATION ----------------------
@@ -1115,7 +1143,36 @@ async function getCachedMovie(
   const key = `${type}_${safeName(cacheName).toLowerCase()}`;
   const file = path.join(CACHE_DIR, key + '.json');
 
-  // ✅ cache présent → tentative de lecture
+  // 🔒 Vérifier override en base de données
+  const mediaType = type === 'movie' ? 'films' : (type === 'tv' ? 'series' : null);
+  const override = mediaType ? db.getOverride(mediaType, safeName(cacheName)) : null;
+
+  if (override) {
+    // Override actif → utiliser l'ID forcé
+    if (fs.existsSync(file)) {
+      try {
+        const cached = JSON.parse(fs.readFileSync(file, 'utf8'));
+        if (cached.id === override.api_id_override) return cached;
+        // Cache avec mauvais ID → supprimer et re-fetch
+        console.log(`🔄 Override TMDb (ID: ${override.api_id_override}), mise à jour du cache`);
+        fs.unlinkSync(file);
+      } catch {
+        console.log(`♻️ Cache TMDb corrompu, recréation : ${file}`);
+        fs.unlinkSync(file);
+      }
+    }
+
+    let details = await getTMDbDetails(override.api_id_override, language, type);
+    if (!details) {
+      details = await getTMDbDetails(override.api_id_override, 'en-US', type);
+    }
+    if (details) {
+      fs.writeFileSync(file, JSON.stringify(details, null, 2));
+    }
+    return details;
+  }
+
+  // ✅ Pas d'override → flow normal : cache présent → tentative de lecture
   if (fs.existsSync(file)) {
     try {
       return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -1123,7 +1180,7 @@ async function getCachedMovie(
       console.log(`♻️ Cache TMDb corrompu, recréation : ${file}`);
       fs.unlinkSync(file);
     }
-}
+  }
 
   // 🔎 search FR → EN
   let search = await searchTMDb(title, year, language, type);
@@ -1728,7 +1785,8 @@ async function runTasks(tasks, limit) {
 // ---------------------- MAIN ----------------------
 (async () => {
   console.log('🚀 Scan initial au démarrage');
-  
+  writeStatus({ state: 'running', startedAt: new Date().toISOString(), type: 'full' });
+
     // UPDATE TRACKERS AVANT TOUT
   await updateAllTorrentsIfNeeded();
   
@@ -1763,15 +1821,19 @@ async function runTasks(tasks, limit) {
         const full = path.join(src, e.name);
 
         if (e.isFile() && isVideoFile(e.name)) {
-          tasks.push(() =>
-            processFile(full, media.dest, ++i, total, 'Film', TMDB_TYPE_BY_MEDIA[media.name], media.sources)
-          );
+          tasks.push(() => {
+            const idx = ++i;
+            writeStatus({ state: 'running', startedAt: new Date().toISOString(), type: 'full', current: idx, total, currentItem: e.name, mediaType: 'films' });
+            return processFile(full, media.dest, idx, total, 'Film', TMDB_TYPE_BY_MEDIA[media.name], media.sources);
+          });
         }
 
         if (e.isDirectory()) {
-          tasks.push(() =>
-            processFilmFolder(full, media.dest, ++i, total, media.sources)
-          );
+          tasks.push(() => {
+            const idx = ++i;
+            writeStatus({ state: 'running', startedAt: new Date().toISOString(), type: 'full', current: idx, total, currentItem: e.name, mediaType: 'films' });
+            return processFilmFolder(full, media.dest, idx, total, media.sources);
+          });
         }
       }
 
@@ -1802,15 +1864,19 @@ async function runTasks(tasks, limit) {
         const full = path.join(src, e.name);
 
         if (e.isFile() && isVideoFile(e.name)) {
-          tasks.push(() =>
-            processFile(full, media.dest, ++i, total, 'Série fichier', TMDB_TYPE_BY_MEDIA[media.name], media.sources)
-          );
+          tasks.push(() => {
+            const idx = ++i;
+            writeStatus({ state: 'running', startedAt: new Date().toISOString(), type: 'full', current: idx, total, currentItem: e.name, mediaType: 'series' });
+            return processFile(full, media.dest, idx, total, 'Série fichier', TMDB_TYPE_BY_MEDIA[media.name], media.sources);
+          });
         }
 
         if (e.isDirectory()) {
-          tasks.push(() =>
-            processSeriesFolder(full, media.dest, ++i, total)
-          );
+          tasks.push(() => {
+            const idx = ++i;
+            writeStatus({ state: 'running', startedAt: new Date().toISOString(), type: 'full', current: idx, total, currentItem: e.name, mediaType: 'series' });
+            return processSeriesFolder(full, media.dest, idx, total);
+          });
         }
       }
 
@@ -1821,7 +1887,7 @@ async function runTasks(tasks, limit) {
 
       await runTasks(tasks, PARALLEL_JOBS);
     }
-	
+
 	if (media.name === 'musiques') {
   const allEntries = [];
   for (const src of media.sources) {
@@ -1835,14 +1901,16 @@ async function runTasks(tasks, limit) {
   let i = 0;
   const total = allEntries.length;
 
-  const tasks = allEntries.map(({ entry: e, source: src }) => () =>
-    processMusicEntry(
+  const tasks = allEntries.map(({ entry: e, source: src }) => () => {
+    const idx = ++i;
+    writeStatus({ state: 'running', startedAt: new Date().toISOString(), type: 'full', current: idx, total, currentItem: e.name, mediaType: 'musiques' });
+    return processMusicEntry(
       path.join(src, e.name),
       media.dest,
-      ++i,
+      idx,
       total
-    )
-  );
+    );
+  });
 
   await runTasks(tasks, PARALLEL_JOBS);
 }
@@ -1874,4 +1942,11 @@ console.log(`📜 Prez générées      : ${prezGenerated}`);
 console.log(`🗑️ Orphelins nettoyés : ${orphansCleaned}`);
 console.log(`⏱️ Temps total        : ${formatDuration(totalTime)}`);
 console.log('==============================');
+
+writeStatus({
+  state: 'idle',
+  lastScan: new Date().toISOString(),
+  stats: { processed, skipped, reprocessed, tmdbFound, tmdbMissing, itunesFound, itunesMissing, prezGenerated, orphansCleaned },
+  duration: formatDuration(totalTime)
+});
 })();

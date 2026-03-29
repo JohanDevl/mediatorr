@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mediatorr</title>
+    <link rel="icon" href="/img/favicon.svg" />
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <nav class="nav">
+        <div class="nav-logo">
+          <span class="nav-item-icon">▶</span>
+          Mediatorr
+        </div>
+        <ul class="nav-list">
+          <li class="nav-item">
+            <a href="/" class="nav-link" data-page="dashboard">
+              <span class="nav-item-icon">⌂</span>
+              Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/media/films" class="nav-link" data-page="films">
+              <span class="nav-item-icon">🎬</span>
+              Films
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/media/series" class="nav-link" data-page="series">
+              <span class="nav-item-icon">📺</span>
+              Series
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/media/musiques" class="nav-link" data-page="musiques">
+              <span class="nav-item-icon">♪</span>
+              Musiques
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/config" class="nav-link" data-page="config">
+              <span class="nav-item-icon">⚙</span>
+              Config
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/logs" class="nav-link" data-page="logs">
+              <span class="nav-item-icon">⌨</span>
+              Logs
+            </a>
+          </li>
+        </ul>
+      </nav>
+      <main class="main">
+        <header class="header">
+          <h1 class="header-title">Dashboard</h1>
+          <div class="header-controls">
+            <div class="status-indicator">
+              <span class="status-dot" id="status-dot"></span>
+              <span id="status-text">Loading...</span>
+            </div>
+            <button
+              class="btn btn-secondary btn-small"
+              id="theme-toggle"
+              title="Toggle dark mode"
+            >
+              🌙
+            </button>
+          </div>
+        </header>
+        <div class="content" id="content">
+          <!--PAGE_CONTENT-->
+        </div>
+      </main>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script src="/js/app.js"></script>
+  </body>
+</html>

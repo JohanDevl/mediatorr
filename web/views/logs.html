@@ -1,0 +1,27 @@
+<div class="page-logs">
+  <div class="breadcrumb">
+    <a href="#dashboard">Dashboard</a> <span class="breadcrumb-separator">/</span> <span class="breadcrumb-item active">Logs</span>
+  </div>
+
+  <!-- Controls -->
+  <div class="card" style="margin-bottom: 1rem;">
+    <div class="toolbar">
+      <div class="btn-group">
+        <button class="btn btn-secondary btn-sm" id="btn-clear">Effacer</button>
+        <button class="btn btn-secondary btn-sm active" id="btn-autoscroll">Auto-scroll</button>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-secondary btn-sm filter-btn active" data-level="all">Tout</button>
+        <button class="btn btn-secondary btn-sm filter-btn" data-level="info">Info</button>
+        <button class="btn btn-secondary btn-sm filter-btn" data-level="warning">Warning</button>
+        <button class="btn btn-secondary btn-sm filter-btn" data-level="error">Error</button>
+      </div>
+      <span class="text-muted" id="log-count">0 lignes</span>
+    </div>
+  </div>
+
+  <!-- Log Viewer -->
+  <div class="log-viewer" id="log-viewer">
+    <div class="empty-state" style="min-height: auto; padding: var(--spacing-lg); gap: 0;">En attente de logs...</div>
+  </div>
+</div>

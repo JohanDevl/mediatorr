@@ -4,6 +4,7 @@ set -e
 ENABLE_FILMS="${ENABLE_FILMS:-false}"
 ENABLE_SERIES="${ENABLE_SERIES:-false}"
 ENABLE_MUSIQUES="${ENABLE_MUSIQUES:-false}"
+ENABLE_CLEANUP="${ENABLE_CLEANUP:-true}"
 
 has_partial_files() {
   DIR="$1"
@@ -22,13 +23,23 @@ watch_dir() {
 
   echo "👀 Surveillance activée pour $LABEL : $DIR"
 
-  inotifywait -m -r \
-    -e create -e moved_to -e close_write -e delete -e moved_from \
-    --format '%e %w%f' \
-    "$DIR" 2>/dev/null | while read EVENT_LINE
+  if [ "$ENABLE_CLEANUP" = "true" ]; then
+    EVENTS="-e create -e moved_to -e close_write -e delete -e moved_from"
+    FORMAT='%e %w%f'
+  else
+    EVENTS="-e create -e moved_to -e close_write"
+    FORMAT='%w%f'
+  fi
+
+  inotifywait -m -r $EVENTS --format "$FORMAT" "$DIR" 2>/dev/null | while read EVENT_LINE
   do
-    EVENT="${EVENT_LINE%% *}"
-    path="${EVENT_LINE#* }"
+    if [ "$ENABLE_CLEANUP" = "true" ]; then
+      EVENT="${EVENT_LINE%% *}"
+      path="${EVENT_LINE#* }"
+    else
+      EVENT=""
+      path="$EVENT_LINE"
+    fi
 
     # suppression/déplacement → rescan pour nettoyage orphelins
     case "$EVENT" in
@@ -39,7 +50,7 @@ watch_dir() {
         fi
         echo "🗑️ Suppression détectée ($LABEL) : $(basename "$path")"
         LAST_SCAN=$(date +%s)
-        node /app/scene-maker.js || echo "⚠️ Erreur scene-maker ($LABEL), reprise au prochain événement"
+        flock -n /tmp/scene-maker.lock node /app/scene-maker.js || echo "⚠️ Erreur scene-maker ($LABEL), reprise au prochain événement"
         continue
         ;;
     esac
@@ -68,13 +79,13 @@ watch_dir() {
         fi
         echo "✅ Téléchargement terminé ($LABEL) : $(basename "$path")"
         LAST_SCAN=$(date +%s)
-        node /app/scene-maker.js || echo "⚠️ Erreur scene-maker ($LABEL), reprise au prochain événement"
+        flock -n /tmp/scene-maker.lock node /app/scene-maker.js || echo "⚠️ Erreur scene-maker ($LABEL), reprise au prochain événement"
         ;;
       *)
         if [ -d "$path" ]; then
           echo "📁 Nouveau dossier détecté ($LABEL) : $(basename "$path")"
           LAST_SCAN=$(date +%s)
-          node /app/scene-maker.js || echo "⚠️ Erreur scene-maker ($LABEL), reprise au prochain événement"
+          flock -n /tmp/scene-maker.lock node /app/scene-maker.js || echo "⚠️ Erreur scene-maker ($LABEL), reprise au prochain événement"
         fi
         ;;
     esac
@@ -82,9 +93,21 @@ watch_dir() {
 }
 
 # -------- SCAN INITIAL --------
-echo "🚀 Scan initial au démarrage"
-node /app/scene-maker.js
+ENABLE_INITIAL_SCAN="${ENABLE_INITIAL_SCAN:-true}"
+if [ "$ENABLE_INITIAL_SCAN" = "true" ]; then
+  echo "🚀 Scan initial au démarrage"
+  node /app/scene-maker.js
+fi
 # ------------------------------
+
+# -------- WEB SERVER --------
+ENABLE_WEB="${ENABLE_WEB:-true}"
+WEB_PORT="${WEB_PORT:-5765}"
+if [ "$ENABLE_WEB" = "true" ]; then
+  echo "🌐 Starting web interface on port $WEB_PORT"
+  WEB_PORT="$WEB_PORT" node /app/web/server.js &
+fi
+# -----------------------------
 
 FILMS_DIRS="${FILMS_DIRS:-/films}"
 SERIES_DIRS="${SERIES_DIRS:-/series}"
